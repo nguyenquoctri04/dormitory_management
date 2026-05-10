@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ptit-red: #CD151C;
+  --color-ptit-red-hover: #b01015;
+  --color-ptit-yellow: #F8E115;
+  --color-ptit-yellow-hover: #dcc810;
+  --color-background: #f8fafc;
+  --color-foreground: #0f172a;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
