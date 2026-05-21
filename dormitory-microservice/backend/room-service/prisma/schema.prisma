@@ -1,14 +1,68 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+model Room {
+  id          Int      @id @default(autoincrement())
+  roomNumber  String   @unique @map("room_number")
+  capacity    Int
+  type        RoomType
+  gender      GenderType
+  status      String   @default("AVAILABLE")
+  createdAt   DateTime @map("created_at") @default(now())
+  updatedAt   DateTime @map("updated_at") @default(now()) @updatedAt
+
+  stays       Stay[]
+
+  @@map("rooms")
+}
+
+model Period {
+  id             Int      @id @default(autoincrement())
+  name           String
+  durationMonths Int      @map("duration_months")
+  createdAt      DateTime @map("created_at") @default(now())
+  updatedAt      DateTime @map("updated_at") @default(now()) @updatedAt
+
+  stays          Stay[]
+
+  @@map("periods")
+}
+
+model Stay {
+  id         Int       @id @default(autoincrement())
+  studentId  Int       @map("student_id")
+  roomId     Int       @map("room_id")
+  periodId   Int       @map("period_id")
+  startDate  DateTime  @map("start_date") @default(now())
+  endDate    DateTime? @map("end_date")
+  status     StayStatus @default(ACTIVE)
+  createdAt  DateTime   @map("created_at") @default(now())
+  updatedAt  DateTime   @map("updated_at") @default(now()) @updatedAt
+
+  room       Room      @relation(fields: [roomId], references: [id])
+  period     Period    @relation(fields: [periodId], references: [id])
+
+  @@map("stays")
+}
+
+enum RoomType {
+  NORMAL
+  PREMIUM
+}
+
+enum GenderType {
+  MALE
+  FEMALE
+}
+
+enum StayStatus {
+  ACTIVE
+  ENDED
+  LEFT_EARLY
 }

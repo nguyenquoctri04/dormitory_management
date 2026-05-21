@@ -1,14 +1,55 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+model Payment {
+  id             Int           @id @default(autoincrement())
+  registrationId Int           @unique @map("registration_id")
+  studentId      Int           @map("student_id")
+  roomId         Int?          @map("room_id")
+  amount         Decimal       @db.Decimal(10, 2)
+  status         PaymentStatus @default(PENDING)
+  paymentDate    DateTime?     @map("payment_date")
+  createdAt      DateTime      @map("created_at") @default(now())
+  updatedAt      DateTime      @map("updated_at") @default(now()) @updatedAt
+
+  @@map("payments")
+}
+
+model Invoice {
+  id             Int           @id @default(autoincrement())
+  studentId      Int           @map("student_id")
+  roomId         Int           @map("room_id")
+  type           InvoiceType
+  registrationId Int?          @map("registration_id")
+  utilityId      Int?          @map("utility_id")
+  amount         Decimal       @db.Decimal(10, 2)
+  status         InvoiceStatus @default(UNPAID)
+  month          Int
+  year           Int
+  createdAt      DateTime      @map("created_at") @default(now())
+  updatedAt      DateTime      @map("updated_at") @default(now()) @updatedAt
+
+  @@map("invoices")
+}
+
+enum InvoiceType {
+  ROOM_FEE
+  UTILITY
+}
+
+enum InvoiceStatus {
+  UNPAID
+  PAID
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
 }
