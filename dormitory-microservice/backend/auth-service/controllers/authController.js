@@ -58,11 +58,11 @@ async function login(req, res) {
 
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
+      return res.status(401).json({ error: 'Invalid email' });
     }
 
-    // const passwordMatch = await bcryptjs.compare(password, user.password);
-    if (!password) {
+    const passwordMatch = await bcryptjs.compare(password, user.password);
+    if (!passwordMatch) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 

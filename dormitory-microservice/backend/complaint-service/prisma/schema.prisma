@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Complaint {
+  id          Int      @id @default(autoincrement())
+  studentId   Int      @map("student_id")
+  roomId      Int      @map("room_id")
+  title       String
+  description String   @db.Text
+  status      String   @default("PENDING")
+  createdAt   DateTime @map("created_at") @default(now())
+  updatedAt   DateTime @map("updated_at") @default(now()) @updatedAt
+
+  @@map("complaints")
+}
