@@ -13,9 +13,9 @@ const router = express.Router();
 
 router.post('/register', register);
 router.post('/login', login);
-router.post('/logout', authenticateToken, logout);
+router.post('/logout', logout);
 router.get('/me', authenticateToken, me);
 router.post('/verify', authenticateToken, verifyToken);
-router.post('/refresh', authenticateToken, refreshToken);
+router.post('/refresh', refreshToken);
 
 module.exports = router;

@@ -1,6 +1,10 @@
 const bcryptjs = require('bcryptjs');
 const prisma = require('../lib/prismaClient');
-const { generateToken, TOKEN_EXPIRY } = require('../utils/jwt');
+const { 
+  generateAccessToken, 
+  generateRefreshToken, 
+  verifyRefreshToken 
+} = require('../utils/jwt');
 const { addToken } = require('../utils/tokenBlacklist');
 
 const getDisplayName = (email) => {
@@ -66,13 +70,25 @@ async function login(req, res) {
       return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    const token = generateToken({ userId: user.id, role: user.role });
-    const expiresAt = new Date(Date.now() + TOKEN_EXPIRY * 1000).toISOString();
+    const accessToken = generateAccessToken({ userId: user.id, role: user.role });
+    const refreshToken = generateRefreshToken({ userId: user.id });
+
+    // Store refresh token in DB
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        userId: user.id,
+        expiresAt,
+      },
+    });
 
     res.status(200).json({
       message: 'Login successful',
-      token,
-      expiresAt,
+      accessToken,
+      refreshToken,
       user: {
         id: user.id,
         email: user.email,
@@ -88,9 +104,12 @@ async function login(req, res) {
 
 async function logout(req, res) {
   try {
-    const token = req.token;
-    const expiresAt = req.user.exp ? req.user.exp * 1000 : Date.now() + TOKEN_EXPIRY * 1000;
-    addToken(token, expiresAt);
+    const { refreshToken } = req.body;
+    if (refreshToken) {
+      await prisma.refreshToken.deleteMany({
+        where: { token: refreshToken }
+      });
+    }
     res.status(200).json({ message: 'Logout successful' });
   } catch (error) {
     console.error('Logout error:', error);
@@ -127,17 +146,42 @@ function verifyToken(req, res) {
 
 async function refreshToken(req, res) {
   try {
-    const oldToken = req.token;
-    const expiresAt = req.user.exp ? req.user.exp * 1000 : Date.now() + TOKEN_EXPIRY * 1000;
-    addToken(oldToken, expiresAt);
+    const { refreshToken } = req.body;
 
-    const newToken = generateToken({ userId: req.user.userId, role: req.user.role });
-    const newExpiresAt = new Date(Date.now() + TOKEN_EXPIRY * 1000).toISOString();
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'Refresh token is required' });
+    }
+
+    // Verify token cryptographically
+    let decoded;
+    try {
+      decoded = verifyRefreshToken(refreshToken);
+    } catch (err) {
+      return res.status(401).json({ error: 'Invalid refresh token' });
+    }
+
+    // Check if token exists in DB
+    const storedToken = await prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+      include: { user: true }
+    });
+
+    if (!storedToken || storedToken.expiresAt < new Date()) {
+      if (storedToken) {
+        await prisma.refreshToken.delete({ where: { id: storedToken.id } });
+      }
+      return res.status(401).json({ error: 'Refresh token expired or invalid' });
+    }
+
+    // Generate new Access Token
+    const accessToken = generateAccessToken({ 
+      userId: storedToken.user.id, 
+      role: storedToken.user.role 
+    });
 
     res.status(200).json({
       message: 'Token refreshed',
-      token: newToken,
-      expiresAt: newExpiresAt,
+      accessToken,
     });
   } catch (error) {
     console.error('Refresh token error:', error);

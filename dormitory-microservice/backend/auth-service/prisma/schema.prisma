@@ -8,13 +8,25 @@ datasource db {
 }
 
 model User {
-  id         Int      @id @default(autoincrement())
-  email      String   @unique
-  password   String
-  role       UserRole @default(STUDENT)
-  createdAt  DateTime @map("created_at") @default(now())
+  id           Int            @id @default(autoincrement())
+  email        String         @unique
+  password     String
+  role         UserRole       @default(STUDENT)
+  createdAt    DateTime       @map("created_at") @default(now())
+  refreshTokens RefreshToken[]
 
   @@map("users")
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique @db.VarChar(500)
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @map("created_at") @default(now())
+
+  @@map("refresh_tokens")
 }
 
 enum UserRole {

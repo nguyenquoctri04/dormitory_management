@@ -1,4 +1,4 @@
-const { verifyToken } = require('../utils/jwt');
+const { verifyAccessToken: verifyToken } = require('../utils/jwt');
 const { isBlacklisted } = require('../utils/tokenBlacklist');
 
 function authenticateToken(req, res, next) {

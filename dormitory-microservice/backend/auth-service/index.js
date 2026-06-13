@@ -18,17 +18,27 @@ app.use((err, req, res, next) => {
 });
 
 async function startServer() {
-  try {
-    await prisma.$connect();
-    console.log('✅ Connected to MySQL with Prisma');
-
-    app.listen(PORT, () => {
-      console.log(`🚀 Auth Service is running on port ${PORT}`);
-    });
-  } catch (error) {
-    console.error('❌ Failed to connect to database:', error);
-    process.exit(1);
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      await prisma.$connect();
+      console.log('✅ Connected to MySQL with Prisma');
+      break;
+    } catch (error) {
+      console.error(`❌ Failed to connect to database. Retries left: ${retries - 1}`);
+      console.error(error.message);
+      retries -= 1;
+      if (retries === 0) {
+        console.error('Max retries reached. Exiting...');
+        process.exit(1);
+      }
+      await new Promise(res => setTimeout(res, 5000));
+    }
   }
+
+  app.listen(PORT, () => {
+    console.log(`🚀 Auth Service is running on port ${PORT}`);
+  });
 }
 
 startServer();

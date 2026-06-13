@@ -1,0 +1,17 @@
+CREATE DATABASE IF NOT EXISTS auth_db;
+CREATE DATABASE IF NOT EXISTS student_db;
+CREATE DATABASE IF NOT EXISTS room_db;
+CREATE DATABASE IF NOT EXISTS registration_db;
+CREATE DATABASE IF NOT EXISTS payment_db;
+CREATE DATABASE IF NOT EXISTS complaint_db;
+CREATE DATABASE IF NOT EXISTS utility_db;
+
+GRANT ALL PRIVILEGES ON auth_db.* TO 'root'@'%';
+GRANT ALL PRIVILEGES ON student_db.* TO 'root'@'%';
+GRANT ALL PRIVILEGES ON room_db.* TO 'root'@'%';
+GRANT ALL PRIVILEGES ON registration_db.* TO 'root'@'%';
+GRANT ALL PRIVILEGES ON payment_db.* TO 'root'@'%';
+GRANT ALL PRIVILEGES ON complaint_db.* TO 'root'@'%';
+GRANT ALL PRIVILEGES ON utility_db.* TO 'root'@'%';
+
+FLUSH PRIVILEGES;
