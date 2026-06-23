@@ -35,7 +35,7 @@ const getInvoiceDetails = async (req, res) => {
     const student_id = req.user?.id;
 
     const invoice = await prisma.invoice.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
       include: {
         student: {
           select: { id: true, fullName: true, phone: true },
@@ -69,7 +69,7 @@ const getAllInvoices = async (req, res) => {
 
     if (status) where.status = status;
     if (type) where.type = type;
-    if (room_id) where.roomId = parseInt(room_id);
+    if (room_id) where.roomId = room_id;
     if (year) where.year = parseInt(year);
     if (month) where.month = parseInt(month);
 
@@ -98,7 +98,7 @@ const getInvoiceDetailsAdmin = async (req, res) => {
     const { id } = req.params;
 
     const invoice = await prisma.invoice.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
       include: {
         student: {
           select: { id: true, fullName: true, phone: true },
@@ -130,10 +130,10 @@ const createRoomFeeInvoice = async (req, res) => {
 
     const invoice = await prisma.invoice.create({
       data: {
-        studentId: parseInt(student_id),
-        roomId: parseInt(room_id),
+        studentId: student_id,
+        roomId: room_id,
         type: 'ROOM_FEE',
-        registrationId: registration_id ? parseInt(registration_id) : null,
+        registrationId: registration_id || null,
         amount: parseFloat(amount),
         status: 'UNPAID',
         month: month ? parseInt(month) : new Date().getMonth() + 1,
@@ -158,7 +158,7 @@ const generateUtilityInvoices = async (req, res) => {
     }
 
     const utility = await prisma.utility.findUnique({
-      where: { id: parseInt(utility_id) },
+      where: { id: utility_id },
     });
 
     if (!utility) {
@@ -192,7 +192,7 @@ const generateUtilityInvoices = async (req, res) => {
       const existing = await prisma.invoice.findFirst({
         where: {
           studentId: stay.studentId,
-          utilityId: parseInt(utility_id),
+          utilityId: utility_id,
         },
       });
 
@@ -202,7 +202,7 @@ const generateUtilityInvoices = async (req, res) => {
             studentId: stay.studentId,
             roomId: utility.roomId,
             type: 'UTILITY',
-            utilityId: parseInt(utility_id),
+            utilityId: utility_id,
             amount: amountPerPerson,
             status: 'UNPAID',
             month: utility.month,

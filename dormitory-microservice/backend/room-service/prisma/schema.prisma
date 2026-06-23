@@ -3,17 +3,18 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model Room {
-  id          Int      @id @default(autoincrement())
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
   roomNumber  String   @unique @map("room_number")
   capacity    Int
   type        RoomType
   gender      GenderType
   status      String   @default("AVAILABLE")
+  price       Float    @default(0)
   createdAt   DateTime @map("created_at") @default(now())
   updatedAt   DateTime @map("updated_at") @default(now()) @updatedAt
 
@@ -23,7 +24,7 @@ model Room {
 }
 
 model Period {
-  id             Int      @id @default(autoincrement())
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
   name           String
   durationMonths Int      @map("duration_months")
   createdAt      DateTime @map("created_at") @default(now())
@@ -35,10 +36,10 @@ model Period {
 }
 
 model Stay {
-  id         Int       @id @default(autoincrement())
-  studentId  Int       @map("student_id")
-  roomId     Int       @map("room_id")
-  periodId   Int       @map("period_id")
+  id         String    @id @default(auto()) @map("_id") @db.ObjectId
+  studentId  String    @map("student_id") @db.ObjectId
+  roomId     String    @map("room_id") @db.ObjectId
+  periodId   String    @map("period_id") @db.ObjectId
   startDate  DateTime  @map("start_date") @default(now())
   endDate    DateTime? @map("end_date")
   status     StayStatus @default(ACTIVE)
@@ -60,6 +61,7 @@ enum GenderType {
   MALE
   FEMALE
 }
+
 
 enum StayStatus {
   ACTIVE

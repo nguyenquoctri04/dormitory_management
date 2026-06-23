@@ -3,23 +3,24 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model Student {
-  id          Int       @id @default(autoincrement())
-  userId      Int       @unique @map("user_id")
-  fullName    String?   @map("full_name")
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String     @unique @map("user_id") @db.ObjectId
+  fullName    String?    @map("full_name")
   phone       String?
   gender      GenderType
-  dateOfBirth DateTime? @map("date_of_birth")
-  status      String    @default("ACTIVE")
-  createdAt   DateTime  @map("created_at") @default(now())
-  updatedAt   DateTime  @map("updated_at") @default(now()) @updatedAt
+  dateOfBirth DateTime?  @map("date_of_birth")
+  status      String     @default("ACTIVE")
+  createdAt   DateTime   @map("created_at") @default(now())
+  updatedAt   DateTime   @map("updated_at") @default(now()) @updatedAt
 
   @@map("students")
 }
+
 
 enum GenderType {
   MALE

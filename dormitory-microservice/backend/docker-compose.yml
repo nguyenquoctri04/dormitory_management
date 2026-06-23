@@ -1,0 +1,103 @@
+services:
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - JWT_SECRET=access-secret-key
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - STUDENT_SERVICE_URL=http://student-service:3002
+      - ROOM_SERVICE_URL=http://room-service:3003
+      - REGISTRATION_SERVICE_URL=http://registration-service:3004
+      - PAYMENT_SERVICE_URL=http://payment-service:3005
+      - COMPLAINT_SERVICE_URL=http://complaint-service:3006
+      - UTILITY_SERVICE_URL=http://utility-service:3007
+    depends_on:
+      auth-service:
+        condition: service_started
+      student-service:
+        condition: service_started
+      room-service:
+        condition: service_started
+      registration-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      complaint-service:
+        condition: service_started
+      utility-service:
+        condition: service_started
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    restart: always
+    command: sh -c "npx prisma db push --accept-data-loss && npm start"
+    environment:
+      - DATABASE_URL=${DATABASE_URL_AUTH}
+      - PORT=3001
+      - JWT_SECRET=access-secret-key
+      - REFRESH_SECRET=refresh-secret-key
+
+  student-service:
+    build: ./student-service
+    container_name: student-service
+    restart: always
+    command: sh -c "npx prisma db push --accept-data-loss && npm start"
+    environment:
+      - DATABASE_URL=${DATABASE_URL_STUDENT}
+      - PORT=3002
+      - JWT_SECRET=access-secret-key
+
+  room-service:
+    build: ./room-service
+    container_name: room-service
+    restart: always
+    command: sh -c "npx prisma db push --accept-data-loss && npm start"
+    environment:
+      - DATABASE_URL=${DATABASE_URL_ROOM}
+      - PORT=3003
+      - JWT_SECRET=access-secret-key
+
+  registration-service:
+    build: ./registration-service
+    container_name: registration-service
+    restart: always
+    command: sh -c "npx prisma db push --accept-data-loss && npm start"
+    environment:
+      - DATABASE_URL=${DATABASE_URL_REGISTRATION}
+      - PORT=3004
+      - JWT_SECRET=access-secret-key
+
+  payment-service:
+    build: ./payment-service
+    container_name: payment-service
+    restart: always
+    command: sh -c "npx prisma db push --accept-data-loss && npm start"
+    environment:
+      - DATABASE_URL=${DATABASE_URL_PAYMENT}
+      - PORT=3005
+      - JWT_SECRET=access-secret-key
+
+  complaint-service:
+    build: ./complaint-service
+    container_name: complaint-service
+    restart: always
+    command: sh -c "npx prisma db push --accept-data-loss && npm start"
+    environment:
+      - DATABASE_URL=${DATABASE_URL_COMPLAINT}
+      - PORT=3006
+      - JWT_SECRET=access-secret-key
+
+  utility-service:
+    build: ./utility-service
+    container_name: utility-service
+    restart: always
+    command: sh -c "npx prisma db push --accept-data-loss && npm start"
+    environment:
+      - DATABASE_URL=${DATABASE_URL_UTILITY}
+      - PORT=3007
+      - JWT_SECRET=access-secret-key

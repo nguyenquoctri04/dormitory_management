@@ -12,7 +12,7 @@ const createUtility = async (req, res) => {
     // Check for duplicate (room_id, month, year)
     const existing = await prisma.utility.findFirst({
       where: {
-        roomId: parseInt(room_id),
+        roomId: room_id,
         month: parseInt(month),
         year: parseInt(year),
       },
@@ -24,7 +24,7 @@ const createUtility = async (req, res) => {
 
     const utility = await prisma.utility.create({
       data: {
-        roomId: parseInt(room_id),
+        roomId: room_id,
         month: parseInt(month),
         year: parseInt(year),
         electricityIndex: parseInt(electricity_index),
@@ -46,7 +46,7 @@ const listUtilities = async (req, res) => {
     const { room_id, month, year } = req.query;
     const where = {};
 
-    if (room_id) where.roomId = parseInt(room_id);
+    if (room_id) where.roomId = room_id;
     if (month) where.month = parseInt(month);
     if (year) where.year = parseInt(year);
 
@@ -71,7 +71,7 @@ const getUtilityDetails = async (req, res) => {
     const { id } = req.params;
 
     const utility = await prisma.utility.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
       include: {
         room: true,
       },
@@ -95,7 +95,7 @@ const updateUtility = async (req, res) => {
     const { electricity_index, water_index, total_amount } = req.body;
 
     const utility = await prisma.utility.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: {
         electricityIndex: electricity_index !== undefined ? parseInt(electricity_index) : undefined,
         waterIndex: water_index !== undefined ? parseInt(water_index) : undefined,

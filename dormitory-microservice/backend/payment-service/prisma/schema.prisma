@@ -3,16 +3,16 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model Payment {
-  id             Int           @id @default(autoincrement())
-  registrationId Int           @unique @map("registration_id")
-  studentId      Int           @map("student_id")
-  roomId         Int?          @map("room_id")
-  amount         Decimal       @db.Decimal(10, 2)
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  registrationId String        @unique @map("registration_id") @db.ObjectId
+  studentId      String        @map("student_id") @db.ObjectId
+  roomId         String?       @map("room_id") @db.ObjectId
+  amount         Float
   status         PaymentStatus @default(PENDING)
   paymentDate    DateTime?     @map("payment_date")
   createdAt      DateTime      @map("created_at") @default(now())
@@ -22,13 +22,13 @@ model Payment {
 }
 
 model Invoice {
-  id             Int           @id @default(autoincrement())
-  studentId      Int           @map("student_id")
-  roomId         Int           @map("room_id")
+  id             String        @id @default(auto()) @map("_id") @db.ObjectId
+  studentId      String        @map("student_id") @db.ObjectId
+  roomId         String        @map("room_id") @db.ObjectId
   type           InvoiceType
-  registrationId Int?          @map("registration_id")
-  utilityId      Int?          @map("utility_id")
-  amount         Decimal       @db.Decimal(10, 2)
+  registrationId String?       @map("registration_id") @db.ObjectId
+  utilityId      String?       @map("utility_id") @db.ObjectId
+  amount         Float
   status         InvoiceStatus @default(UNPAID)
   month          Int
   year           Int
@@ -37,6 +37,7 @@ model Invoice {
 
   @@map("invoices")
 }
+
 
 enum InvoiceType {
   ROOM_FEE

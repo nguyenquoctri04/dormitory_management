@@ -3,7 +3,7 @@ const prisma = require('../lib/prismaClient');
 // POST /api/v1/students - Create student profile
 const createStudentProfile = async (req, res) => {
   try {
-    const { full_name, phone, gender, date_of_birth } = req.body;
+    const { fullName, phone, gender, dateOfBirth } = req.body;
     const user_id = req.user?.id;
 
     if (!user_id) {
@@ -22,10 +22,10 @@ const createStudentProfile = async (req, res) => {
     const student = await prisma.student.create({
       data: {
         userId: user_id,
-        fullName: full_name || '',
+        fullName: fullName || '',
         phone: phone || '',
         gender: gender || 'MALE',
-        dateOfBirth: date_of_birth ? new Date(date_of_birth) : null,
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         status: 'ACTIVE',
       },
     });
@@ -64,20 +64,32 @@ const getOwnProfile = async (req, res) => {
 // PATCH /api/v1/students/me - Update own profile
 const updateOwnProfile = async (req, res) => {
   try {
-    const { full_name, phone, gender, date_of_birth } = req.body;
+    const { fullName, phone, gender, dateOfBirth } = req.body;
     const user_id = req.user?.id;
 
     if (!user_id) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const student = await prisma.student.update({
+    const updateData = {};
+    if (fullName !== undefined) updateData.fullName = fullName;
+    if (phone !== undefined) updateData.phone = phone;
+    if (dateOfBirth) updateData.dateOfBirth = new Date(dateOfBirth);
+    
+    // Only update gender if it's a valid enum value
+    if (gender === 'MALE' || gender === 'FEMALE') {
+      updateData.gender = gender;
+    }
+
+    const student = await prisma.student.upsert({
       where: { userId: user_id },
-      data: {
-        fullName: full_name !== undefined ? full_name : undefined,
-        phone: phone !== undefined ? phone : undefined,
-        gender: gender !== undefined ? gender : undefined,
-        dateOfBirth: date_of_birth ? new Date(date_of_birth) : undefined,
+      update: updateData,
+      create: {
+        userId: user_id,
+        fullName: fullName || '',
+        phone: phone || '',
+        gender: (gender === 'MALE' || gender === 'FEMALE') ? gender : 'MALE',
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
       },
     });
 
@@ -108,7 +120,7 @@ const getStudentDetails = async (req, res) => {
     const { id } = req.params;
 
     const student = await prisma.student.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!student) {

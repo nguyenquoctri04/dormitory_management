@@ -10,7 +10,7 @@ const createUtility = async (req, res) => {
 
     const utility = await prisma.utility.create({
       data: {
-        roomId: parseInt(room_id),
+        roomId: room_id,
         month: parseInt(month),
         year: parseInt(year),
         electricityIndex: parseInt(electricity_index),
@@ -32,7 +32,7 @@ const getOwnUtilities = async (req, res) => {
     const where = {};
 
     if (room_id) {
-      where.roomId = parseInt(room_id);
+      where.roomId = room_id;
     }
 
     const utilities = await prisma.utility.findMany({
@@ -51,7 +51,7 @@ const getUtilityDetails = async (req, res) => {
   try {
     const { id } = req.params;
     const utility = await prisma.utility.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!utility) {
@@ -70,7 +70,7 @@ const getAllUtilities = async (req, res) => {
     const { room_id, month, year } = req.query;
     const where = {};
 
-    if (room_id) where.roomId = parseInt(room_id);
+    if (room_id) where.roomId = room_id;
     if (month) where.month = parseInt(month);
     if (year) where.year = parseInt(year);
 
@@ -90,7 +90,7 @@ const getUtilityDetailsAdmin = async (req, res) => {
   try {
     const { id } = req.params;
     const utility = await prisma.utility.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!utility) {
@@ -110,7 +110,7 @@ const updateUtility = async (req, res) => {
     const { electricity_index, water_index, total_amount } = req.body;
 
     const utility = await prisma.utility.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: {
         electricityIndex: electricity_index != null ? parseInt(electricity_index) : undefined,
         waterIndex: water_index != null ? parseInt(water_index) : undefined,

@@ -31,7 +31,7 @@ const getAllStays = async (req, res) => {
     const where = {};
 
     if (status) where.status = status;
-    if (room_id) where.roomId = parseInt(room_id);
+    if (room_id) where.roomId = room_id;
 
     const stays = await prisma.stay.findMany({
       where,
@@ -54,7 +54,7 @@ const endStay = async (req, res) => {
     const { id } = req.params;
 
     const stay = await prisma.stay.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!stay) {
@@ -66,7 +66,7 @@ const endStay = async (req, res) => {
     }
 
     const updated = await prisma.stay.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: {
         endDate: new Date(),
         status: 'ENDED',
@@ -86,7 +86,7 @@ const earlyDeparture = async (req, res) => {
     const { id } = req.params;
 
     const stay = await prisma.stay.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!stay) {
@@ -98,7 +98,7 @@ const earlyDeparture = async (req, res) => {
     }
 
     const updated = await prisma.stay.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: {
         endDate: new Date(),
         status: 'LEFT_EARLY',
@@ -112,9 +112,39 @@ const earlyDeparture = async (req, res) => {
   }
 };
 
+// POST /api/v1/stays/admin/create - Create stay (Internal/Admin only)
+const createStay = async (req, res) => {
+  try {
+    const { student_id, room_id, period_id, start_date, end_date } = req.body;
+
+    if (!student_id || !room_id || !period_id || !start_date) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const stay = await prisma.stay.create({
+      data: {
+        studentId: student_id,
+        roomId: room_id,
+        periodId: period_id,
+        startDate: new Date(start_date),
+        endDate: end_date ? new Date(end_date) : null,
+        status: 'ACTIVE',
+      },
+    });
+
+    res.status(201).json({ message: 'Stay created', stay });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
 module.exports = {
   getOwnStays,
   getAllStays,
   endStay,
   earlyDeparture,
+  createStay,
 };
+

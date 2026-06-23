@@ -3,26 +3,30 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model Registration {
-  id                Int                @id @default(autoincrement())
-  studentId         Int                @map("student_id")
+  id                String             @id @default(auto()) @map("_id") @db.ObjectId
+  studentId         String             @map("student_id") @db.ObjectId
   requestedRoomType RoomType           @map("requested_room_type")
   requestedGender   GenderType         @map("requested_gender")
-  roomId            Int?               @map("room_id")
-  periodId          Int                @map("period_id")
+  roomId            String?            @map("room_id") @db.ObjectId
+  periodId          String             @map("period_id")
   startDate         DateTime           @map("start_date")
   endDate           DateTime           @map("end_date")
   type              String             // MANUAL, AUTO
   status            RegistrationStatus @default(PENDING)
+  academicYear      String?            @map("academic_year")
+  semester          String?
+  rejectionReason   String?            @map("rejection_reason")
   createdAt         DateTime           @map("created_at") @default(now())
   updatedAt         DateTime           @map("updated_at") @default(now()) @updatedAt
 
   @@map("registrations")
 }
+
 
 enum RoomType {
   NORMAL
