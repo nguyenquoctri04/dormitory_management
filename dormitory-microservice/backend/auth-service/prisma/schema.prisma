@@ -3,25 +3,27 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model User {
-  id           Int            @id @default(autoincrement())
+  id           String         @id @default(auto()) @map("_id") @db.ObjectId
   email        String         @unique
   password     String
   role         UserRole       @default(STUDENT)
+  status       UserStatus     @default(ACTIVE)
   createdAt    DateTime       @map("created_at") @default(now())
+  updatedAt    DateTime       @map("updated_at") @default(now()) @updatedAt
   refreshTokens RefreshToken[]
 
   @@map("users")
 }
 
 model RefreshToken {
-  id        Int      @id @default(autoincrement())
-  token     String   @unique @db.VarChar(500)
-  userId    Int      @map("user_id")
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  token     String   @unique
+  userId    String   @map("user_id") @db.ObjectId
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @map("created_at") @default(now())
@@ -29,7 +31,14 @@ model RefreshToken {
   @@map("refresh_tokens")
 }
 
+
 enum UserRole {
   ADMIN
   STUDENT
+  STAFF
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
 }

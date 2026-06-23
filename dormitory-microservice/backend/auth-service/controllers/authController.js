@@ -73,22 +73,27 @@ async function login(req, res) {
     const accessToken = generateAccessToken({ userId: user.id, role: user.role });
     const refreshToken = generateRefreshToken({ userId: user.id });
 
-    // Store refresh token in DB
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+    // Access token expires in 15m, Refresh token in 7d
+    const accessExpiresAt = new Date();
+    accessExpiresAt.setMinutes(accessExpiresAt.getMinutes() + 15);
+
+    const refreshExpiresAt = new Date();
+    refreshExpiresAt.setDate(refreshExpiresAt.getDate() + 7);
 
     await prisma.refreshToken.create({
       data: {
         token: refreshToken,
         userId: user.id,
-        expiresAt,
+        expiresAt: refreshExpiresAt,
       },
     });
 
     res.status(200).json({
       message: 'Login successful',
-      accessToken,
+      token: accessToken,
+      accessToken: accessToken,
       refreshToken,
+      expiresAt: accessExpiresAt, // Tell frontend when the ACCESS token expires
       user: {
         id: user.id,
         email: user.email,
@@ -181,11 +186,188 @@ async function refreshToken(req, res) {
 
     res.status(200).json({
       message: 'Token refreshed',
-      accessToken,
+      token: accessToken,
     });
   } catch (error) {
     console.error('Refresh token error:', error);
     res.status(500).json({ error: 'Server error during token refresh' });
+  }
+}
+
+async function createInitialAdmin(req, res) {
+  try {
+    const { email, password, secret } = req.body;
+    
+    // Simple secret check for initial setup
+    if (secret !== 'admin-setup-secret-123') {
+      return res.status(403).json({ error: 'Unauthorized setup request' });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(409).json({ error: 'Admin email already exists' });
+    }
+
+    const hashedPassword = await bcryptjs.hash(password, 10);
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        role: 'ADMIN',
+      },
+    });
+
+    res.status(201).json({ 
+      message: 'Initial admin created', 
+      user: { id: user.id, email: user.email, role: user.role } 
+    });
+  } catch (error) {
+    console.error('Create Admin error:', error);
+    res.status(500).json({ error: 'Server error during admin creation' });
+  }
+}
+
+async function getAllUsers(req, res) {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.status(200).json({ data: users });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch users' });
+  }
+}
+
+async function createStaff(req, res) {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(409).json({ error: 'Email already exists' });
+    }
+
+    const hashedPassword = await bcryptjs.hash(password, 10);
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        role: 'STAFF',
+        status: 'ACTIVE',
+      },
+    });
+
+    res.status(201).json({
+      message: 'Staff account created successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Create Staff error:', error);
+    res.status(500).json({ error: 'Server error during staff creation' });
+  }
+}
+
+async function updateUserStatus(req, res) {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['ACTIVE', 'INACTIVE'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: { status },
+    });
+
+    res.status(200).json({ message: 'User status updated', user });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update user status' });
+  }
+}
+
+async function updateUserRole(req, res) {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!['ADMIN', 'STUDENT', 'STAFF'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+
+    const user = await prisma.user.update({
+      where: { id },
+      data: { role },
+    });
+
+    res.status(200).json({ message: 'User role updated', user });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update user role' });
+  }
+}
+
+async function deleteUser(req, res) {
+  try {
+    const { id } = req.params;
+    await prisma.user.delete({ where: { id } });
+    res.status(200).json({ message: 'User deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+}
+
+async function changePassword(req, res) {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.user.userId;
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ error: 'Old and new passwords are required' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const passwordMatch = await bcryptjs.compare(oldPassword, user.password);
+    if (!passwordMatch) {
+      return res.status(400).json({ error: 'Incorrect old password' });
+    }
+
+    const hashedPassword = await bcryptjs.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    });
+
+    res.status(200).json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Server error during password change' });
   }
 }
 
@@ -196,4 +378,11 @@ module.exports = {
   me,
   verifyToken,
   refreshToken,
+  createInitialAdmin,
+  getAllUsers,
+  createStaff,
+  updateUserStatus,
+  updateUserRole,
+  deleteUser,
+  changePassword,
 };

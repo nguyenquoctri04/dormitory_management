@@ -15,7 +15,7 @@ function authenticateToken(req, res, next) {
     }
 
     const decoded = verifyToken(token);
-    req.user = decoded;
+    req.user = { ...decoded, id: decoded.userId };
     req.token = token;
     next();
   } catch (error) {
@@ -23,6 +23,14 @@ function authenticateToken(req, res, next) {
   }
 }
 
+function isAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Require Admin role' });
+  }
+  next();
+}
+
 module.exports = {
   authenticateToken,
+  isAdmin,
 };

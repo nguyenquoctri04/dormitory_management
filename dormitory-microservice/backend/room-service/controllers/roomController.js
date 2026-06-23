@@ -38,7 +38,7 @@ const getRoomDetails = async (req, res) => {
     const { id } = req.params;
 
     const room = await prisma.room.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
       include: {
         stays: {
           where: { status: 'ACTIVE' },
@@ -69,9 +69,9 @@ const getRoomDetails = async (req, res) => {
 // POST /api/v1/admin/rooms - Create room (Admin only)
 const createRoom = async (req, res) => {
   try {
-    const { room_number, capacity, type, gender } = req.body;
+    const { room_number, capacity, type, gender, price } = req.body;
 
-    if (!room_number || !capacity || !type || !gender) {
+    if (!room_number || !capacity || !type || !gender || price === undefined) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -82,6 +82,7 @@ const createRoom = async (req, res) => {
         type,
         gender,
         status: 'AVAILABLE',
+        price: parseFloat(price),
       },
     });
 
@@ -99,12 +100,13 @@ const updateRoom = async (req, res) => {
     const { capacity, type, gender, status } = req.body;
 
     const room = await prisma.room.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: {
         capacity: capacity !== undefined ? parseInt(capacity) : undefined,
         type: type !== undefined ? type : undefined,
         gender: gender !== undefined ? gender : undefined,
         status: status !== undefined ? status : undefined,
+        price: price !== undefined ? parseFloat(price) : undefined,
       },
     });
 
@@ -121,7 +123,7 @@ const deleteRoom = async (req, res) => {
     const { id } = req.params;
 
     await prisma.room.delete({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     res.json({ message: 'Room deleted' });

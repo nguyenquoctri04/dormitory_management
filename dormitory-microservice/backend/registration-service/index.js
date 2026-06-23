@@ -20,7 +20,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     await prisma.$connect();
-    console.log('✅ Connected to MySQL with Prisma');
+    console.log('✅ Connected to MongoDB with Prisma');
 
     app.listen(PORT, () => {
       console.log(`🚀 Registration Service is running on port ${PORT}`);

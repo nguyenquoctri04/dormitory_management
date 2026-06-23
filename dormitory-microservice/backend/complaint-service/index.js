@@ -19,7 +19,7 @@ app.use((err, req, res, next) => {
 async function startServer() {
   try {
     await prisma.$connect();
-    console.log('✅ Connected to MySQL Complaint DB with Prisma');
+    console.log('✅ Connected to MongoDB Complaint DB with Prisma');
 
     app.listen(PORT, () => {
       console.log(`🚀 Complaint Service is running on port ${PORT}`);

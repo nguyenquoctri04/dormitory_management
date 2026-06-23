@@ -8,11 +8,12 @@ const authMiddleware = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
-    req.user = decoded;
+    // Sử dụng JWT_SECRET từ môi trường (access-secret-key)
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'access-secret-key');
+    req.user = { ...decoded, id: decoded.userId };
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
 };
 

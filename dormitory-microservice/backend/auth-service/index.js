@@ -22,7 +22,7 @@ async function startServer() {
   while (retries > 0) {
     try {
       await prisma.$connect();
-      console.log('✅ Connected to MySQL with Prisma');
+      console.log('✅ Connected to MongoDB with Prisma');
       break;
     } catch (error) {
       console.error(`❌ Failed to connect to database. Retries left: ${retries - 1}`);

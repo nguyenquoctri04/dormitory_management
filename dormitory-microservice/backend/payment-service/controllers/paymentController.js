@@ -48,7 +48,7 @@ const createPayment = async (req, res) => {
     }
 
     const existingPayment = await prisma.payment.findUnique({
-      where: { registrationId: parseInt(registration_id) },
+      where: { registrationId: registration_id },
     });
 
     if (existingPayment) {
@@ -57,9 +57,9 @@ const createPayment = async (req, res) => {
 
     const payment = await prisma.payment.create({
       data: {
-        registrationId: parseInt(registration_id),
+        registrationId: registration_id,
         studentId: student_id,
-        roomId: registration?.roomId ? parseInt(registration.roomId) : null,
+        roomId: registration?.roomId || null,
         amount: parseFloat(amount),
         status: 'PENDING',
       },
@@ -96,7 +96,7 @@ const getPaymentDetails = async (req, res) => {
     const student_id = req.user?.id;
 
     const payment = await prisma.payment.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!payment) {
@@ -121,7 +121,7 @@ const confirmPayment = async (req, res) => {
     const student_id = req.user?.id;
 
     const payment = await prisma.payment.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!payment) {
@@ -137,7 +137,7 @@ const confirmPayment = async (req, res) => {
     }
 
     const updated = await prisma.payment.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: { status: 'PAID', paymentDate: new Date() },
     });
 
@@ -155,7 +155,7 @@ const failPayment = async (req, res) => {
     const student_id = req.user?.id;
 
     const payment = await prisma.payment.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!payment) {
@@ -171,7 +171,7 @@ const failPayment = async (req, res) => {
     }
 
     const updated = await prisma.payment.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: { status: 'FAILED' },
     });
 
@@ -208,7 +208,7 @@ const getPaymentDetailsAdmin = async (req, res) => {
     const { id } = req.params;
 
     const payment = await prisma.payment.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!payment) {

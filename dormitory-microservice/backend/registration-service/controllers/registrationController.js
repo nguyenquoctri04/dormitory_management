@@ -1,9 +1,35 @@
 const prisma = require('../lib/prismaClient');
 
+const createStayRecord = async (data, authHeader) => {
+  const roomServiceUrl = process.env.ROOM_SERVICE_URL || 'http://localhost:3003';
+  
+  try {
+    const response = await fetch(`${roomServiceUrl}/api/v1/stays/admin/create`, {
+      method: 'POST',
+      headers: {
+        Authorization: authHeader || '',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Failed to create stay record in room service');
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Inter-service error (Room Service):', error);
+    throw error;
+  }
+};
+
+
 // POST /api/v1/registrations - Create registration
 const createRegistration = async (req, res) => {
   try {
-    const { requested_room_type, requested_gender, period_id, start_date, end_date, type, room_id } = req.body;
+    const { requested_room_type, requested_gender, period_id, start_date, end_date, type, room_id, academic_year, semester } = req.body;
     const student_id = req.user?.id;
 
     if (!requested_room_type || !requested_gender || !period_id || !start_date || !end_date || !type) {
@@ -26,12 +52,14 @@ const createRegistration = async (req, res) => {
         studentId: student_id,
         requestedRoomType: requested_room_type,
         requestedGender: requested_gender,
-        roomId: room_id ? parseInt(room_id) : null,
-        periodId: parseInt(period_id),
+        roomId: room_id || null,
+        periodId: period_id,
         startDate: new Date(start_date),
         endDate: new Date(end_date),
         type,
         status: 'PENDING',
+        academicYear: academic_year,
+        semester: semester,
       },
     });
 
@@ -66,7 +94,7 @@ const getRegistrationDetails = async (req, res) => {
     const student_id = req.user?.id;
 
     const registration = await prisma.registration.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!registration) {
@@ -91,7 +119,7 @@ const cancelRegistration = async (req, res) => {
     const student_id = req.user?.id;
 
     const registration = await prisma.registration.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!registration) {
@@ -107,7 +135,7 @@ const cancelRegistration = async (req, res) => {
     }
 
     const updated = await prisma.registration.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: { status: 'REJECTED' },
     });
 
@@ -144,7 +172,7 @@ const getRegistrationDetailsAdmin = async (req, res) => {
     const { id } = req.params;
 
     const registration = await prisma.registration.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!registration) {
@@ -169,7 +197,7 @@ const approveRegistration = async (req, res) => {
     }
 
     const registration = await prisma.registration.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!registration) {
@@ -181,12 +209,27 @@ const approveRegistration = async (req, res) => {
     }
 
     const updated = await prisma.registration.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: {
         status: 'APPROVED',
-        roomId: parseInt(room_id),
+        roomId: room_id,
       },
     });
+
+    // Notify room service to create a Stay
+    try {
+      await createStayRecord({
+        student_id: registration.studentId,
+        room_id: room_id,
+        period_id: registration.periodId,
+        start_date: registration.startDate,
+        end_date: registration.endDate,
+      }, req.headers.authorization);
+    } catch (stayError) {
+      console.warn('Stay creation failed, but registration was approved:', stayError.message);
+      // We don't rollback registration approval because stay can be created manually if needed, 
+      // but you might want to handle this differently in production.
+    }
 
     res.json({ message: 'Registration approved', updated });
   } catch (error) {
@@ -195,13 +238,15 @@ const approveRegistration = async (req, res) => {
   }
 };
 
+
 // PATCH /api/v1/admin/registrations/:id/reject - Reject registration (Admin only)
 const rejectRegistration = async (req, res) => {
   try {
     const { id } = req.params;
+    const { rejection_reason } = req.body;
 
     const registration = await prisma.registration.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!registration) {
@@ -213,8 +258,11 @@ const rejectRegistration = async (req, res) => {
     }
 
     const updated = await prisma.registration.update({
-      where: { id: parseInt(id) },
-      data: { status: 'REJECTED' },
+      where: { id },
+      data: { 
+        status: 'REJECTED',
+        rejectionReason: rejection_reason || null,
+      },
     });
 
     res.json({ message: 'Registration rejected', updated });
@@ -223,6 +271,7 @@ const rejectRegistration = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 module.exports = {
   createRegistration,

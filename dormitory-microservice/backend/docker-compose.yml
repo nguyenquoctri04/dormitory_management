@@ -1,20 +1,4 @@
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: dormitory_db
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: root
-    ports:
-      - "3307:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   api-gateway:
     build: ./api-gateway
     container_name: api-gateway
@@ -51,87 +35,69 @@ services:
     build: ./auth-service
     container_name: auth-service
     restart: always
-    command: sh -c "sleep 10 && npx prisma db push --accept-data-loss && npm start"
+    command: sh -c "npx prisma db push --accept-data-loss && npm start"
     environment:
-      - DATABASE_URL=mysql://root:root@mysql:3306/auth_db
+      - DATABASE_URL=${DATABASE_URL_AUTH}
       - PORT=3001
       - JWT_SECRET=access-secret-key
       - REFRESH_SECRET=refresh-secret-key
-    depends_on:
-      mysql:
-        condition: service_healthy
 
   student-service:
     build: ./student-service
     container_name: student-service
     restart: always
-    command: sh -c "sleep 10 && npx prisma db push --accept-data-loss && npm start"
+    command: sh -c "npx prisma db push --accept-data-loss && npm start"
     environment:
-      - DATABASE_URL=mysql://root:root@mysql:3306/student_db
+      - DATABASE_URL=${DATABASE_URL_STUDENT}
       - PORT=3002
-    depends_on:
-      mysql:
-        condition: service_healthy
+      - JWT_SECRET=access-secret-key
 
   room-service:
     build: ./room-service
     container_name: room-service
     restart: always
-    command: sh -c "sleep 10 && npx prisma db push --accept-data-loss && npm start"
+    command: sh -c "npx prisma db push --accept-data-loss && npm start"
     environment:
-      - DATABASE_URL=mysql://root:root@mysql:3306/room_db
+      - DATABASE_URL=${DATABASE_URL_ROOM}
       - PORT=3003
-    depends_on:
-      mysql:
-        condition: service_healthy
+      - JWT_SECRET=access-secret-key
 
   registration-service:
     build: ./registration-service
     container_name: registration-service
     restart: always
-    command: sh -c "sleep 10 && npx prisma db push --accept-data-loss && npm start"
+    command: sh -c "npx prisma db push --accept-data-loss && npm start"
     environment:
-      - DATABASE_URL=mysql://root:root@mysql:3306/registration_db
+      - DATABASE_URL=${DATABASE_URL_REGISTRATION}
       - PORT=3004
-    depends_on:
-      mysql:
-        condition: service_healthy
+      - JWT_SECRET=access-secret-key
 
   payment-service:
     build: ./payment-service
     container_name: payment-service
     restart: always
-    command: sh -c "sleep 10 && npx prisma db push --accept-data-loss && npm start"
+    command: sh -c "npx prisma db push --accept-data-loss && npm start"
     environment:
-      - DATABASE_URL=mysql://root:root@mysql:3306/payment_db
+      - DATABASE_URL=${DATABASE_URL_PAYMENT}
       - PORT=3005
-    depends_on:
-      mysql:
-        condition: service_healthy
+      - JWT_SECRET=access-secret-key
 
   complaint-service:
     build: ./complaint-service
     container_name: complaint-service
     restart: always
-    command: sh -c "sleep 10 && npx prisma db push --accept-data-loss && npm start"
+    command: sh -c "npx prisma db push --accept-data-loss && npm start"
     environment:
-      - DATABASE_URL=mysql://root:root@mysql:3306/complaint_db
+      - DATABASE_URL=${DATABASE_URL_COMPLAINT}
       - PORT=3006
-    depends_on:
-      mysql:
-        condition: service_healthy
+      - JWT_SECRET=access-secret-key
 
   utility-service:
     build: ./utility-service
     container_name: utility-service
     restart: always
-    command: sh -c "sleep 10 && npx prisma db push --accept-data-loss && npm start"
+    command: sh -c "npx prisma db push --accept-data-loss && npm start"
     environment:
-      - DATABASE_URL=mysql://root:root@mysql:3306/utility_db
+      - DATABASE_URL=${DATABASE_URL_UTILITY}
       - PORT=3007
-    depends_on:
-      mysql:
-        condition: service_healthy
-
-volumes:
-  mysql_data:
+      - JWT_SECRET=access-secret-key

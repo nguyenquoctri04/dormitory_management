@@ -14,57 +14,43 @@ app.use(helmet());
 // app.use(express.json());
 
 // Services mapping
-const services = [
+// Services grouping for more efficient proxying
+const targetServices = [
   {
-    path: "/api/v1/auth",
+    prefix: "/api/v1/auth",
     target: process.env.AUTH_SERVICE_URL || "http://auth-service:3001",
-    secure: false, // Login/Register are public
+    securePaths: ["/api/v1/auth/users", "/api/v1/auth/change-password", "/api/v1/auth/admin"]
   },
   {
-    path: "/api/v1/students",
+    prefix: "/api/v1/students",
     target: process.env.STUDENT_SERVICE_URL || "http://student-service:3002",
-    secure: true,
+    secure: true
   },
   {
-    path: "/api/v1/rooms",
+    prefix: ["/api/v1/rooms", "/api/v1/periods", "/api/v1/stays"],
     target: process.env.ROOM_SERVICE_URL || "http://room-service:3003",
-    secure: true,
+    secure: true
   },
   {
-    path: "/api/v1/periods",
-    target: process.env.ROOM_SERVICE_URL || "http://room-service:3003",
-    secure: true,
-  },
-  {
-    path: "/api/v1/stays",
-    target: process.env.ROOM_SERVICE_URL || "http://room-service:3003",
-    secure: true,
-  },
-  {
-    path: "/api/v1/registrations",
+    prefix: "/api/v1/registrations",
     target: process.env.REGISTRATION_SERVICE_URL || "http://registration-service:3004",
-    secure: true,
+    secure: true
   },
   {
-    path: "/api/v1/payments",
+    prefix: ["/api/v1/payments", "/api/v1/invoices"],
     target: process.env.PAYMENT_SERVICE_URL || "http://payment-service:3005",
-    secure: true,
+    secure: true
   },
   {
-    path: "/api/v1/invoices",
-    target: process.env.PAYMENT_SERVICE_URL || "http://payment-service:3005",
-    secure: true,
-  },
-  {
-    path: "/api/v1/complaints",
+    prefix: "/api/v1/complaints",
     target: process.env.COMPLAINT_SERVICE_URL || "http://complaint-service:3006",
-    secure: true,
+    secure: true
   },
   {
-    path: "/api/v1/utilities",
+    prefix: "/api/v1/utilities",
     target: process.env.UTILITY_SERVICE_URL || "http://utility-service:3007",
-    secure: true,
-  },
+    secure: true
+  }
 ];
 
 // Health check
@@ -73,22 +59,34 @@ app.get("/health", (req, res) => {
 });
 
 // Setup Proxies
-services.forEach((service) => {
-  // Apply authMiddleware separately if secure
-  if (service.secure) {
-    app.use(service.path, authMiddleware);
-  }
+targetServices.forEach((service) => {
+  const paths = Array.isArray(service.prefix) ? service.prefix : [service.prefix];
+  
+  paths.forEach(p => {
+    // Apply authMiddleware if generally secure or specifically secure
+    if (service.secure) {
+      app.use(p, authMiddleware);
+    } else if (service.securePaths) {
+      service.securePaths.forEach(sp => {
+        if (sp.startsWith(p)) {
+          app.use(sp, authMiddleware);
+        }
+      });
+    }
 
-  // Use pathFilter in the options object to match the path without stripping it (HPM v3/v4 style)
-  app.use(
-    createProxyMiddleware({
-      target: service.target,
-      changeOrigin: true,
-      pathFilter: service.path,
-    })
-  );
+    app.use(
+      createProxyMiddleware({
+        target: service.target,
+        changeOrigin: true,
+        pathFilter: p,
+      })
+    );
+  });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 API Gateway is running on port ${PORT}`);
 });
+
+// Fix MaxListenersExceededWarning
+server.setMaxListeners(20);

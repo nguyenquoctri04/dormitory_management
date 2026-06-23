@@ -9,17 +9,17 @@ const createInvoice = async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    if (requesterId !== parseInt(student_id) && req.user?.role !== 'ADMIN') {
+    if (requesterId !== student_id && req.user?.role !== 'ADMIN') {
       return res.status(403).json({ error: 'Access denied' });
     }
 
     const invoice = await prisma.invoice.create({
       data: {
-        studentId: parseInt(student_id),
-        roomId: parseInt(room_id),
+        studentId: student_id,
+        roomId: room_id,
         type,
-        registrationId: registration_id ? parseInt(registration_id) : null,
-        utilityId: utility_id ? parseInt(utility_id) : null,
+        registrationId: registration_id || null,
+        utilityId: utility_id || null,
         amount: parseFloat(amount),
         status: 'UNPAID',
         month: parseInt(month),
@@ -56,7 +56,7 @@ const getInvoiceDetails = async (req, res) => {
     const student_id = req.user?.id;
 
     const invoice = await prisma.invoice.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!invoice) {
@@ -80,7 +80,7 @@ const markInvoicePaid = async (req, res) => {
     const student_id = req.user?.id;
 
     const invoice = await prisma.invoice.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!invoice) {
@@ -96,7 +96,7 @@ const markInvoicePaid = async (req, res) => {
     }
 
     const updated = await prisma.invoice.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: { status: 'PAID' },
     });
 
@@ -113,7 +113,7 @@ const getAllInvoices = async (req, res) => {
     const where = {};
 
     if (status) where.status = status;
-    if (student_id) where.studentId = parseInt(student_id);
+    if (student_id) where.studentId = student_id;
 
     const invoices = await prisma.invoice.findMany({
       where,
@@ -132,7 +132,7 @@ const getInvoiceDetailsAdmin = async (req, res) => {
     const { id } = req.params;
 
     const invoice = await prisma.invoice.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!invoice) {

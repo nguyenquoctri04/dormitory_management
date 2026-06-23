@@ -3,19 +3,20 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 model Complaint {
-  id          Int      @id @default(autoincrement())
-  studentId   Int      @map("student_id")
-  roomId      Int      @map("room_id")
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId   String   @map("student_id") @db.ObjectId
+  roomId      String   @map("room_id") @db.ObjectId
   title       String
-  description String   @db.Text
+  description String
   status      String   @default("PENDING")
   createdAt   DateTime @map("created_at") @default(now())
   updatedAt   DateTime @map("updated_at") @default(now()) @updatedAt
 
   @@map("complaints")
 }
+

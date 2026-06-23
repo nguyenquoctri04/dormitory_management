@@ -20,7 +20,7 @@ const getPeriodDetails = async (req, res) => {
     const { id } = req.params;
 
     const period = await prisma.period.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     if (!period) {
@@ -64,7 +64,7 @@ const updatePeriod = async (req, res) => {
     const { name, duration_months } = req.body;
 
     const period = await prisma.period.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: {
         name: name !== undefined ? name : undefined,
         durationMonths: duration_months !== undefined ? parseInt(duration_months) : undefined,
@@ -84,7 +84,7 @@ const deletePeriod = async (req, res) => {
     const { id } = req.params;
 
     await prisma.period.delete({
-      where: { id: parseInt(id) },
+      where: { id },
     });
 
     res.json({ message: 'Period deleted' });

@@ -13,7 +13,7 @@ const submitComplaint = async (req, res) => {
     const complaint = await prisma.complaint.create({
       data: {
         studentId: student_id,
-        roomId: parseInt(room_id),
+        roomId: room_id,
         title,
         description,
         status: 'PENDING',
@@ -58,7 +58,7 @@ const getComplaintDetails = async (req, res) => {
     const student_id = req.user?.id;
 
     const complaint = await prisma.complaint.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
       include: {
         student: {
           select: { id: true, fullName: true, phone: true },
@@ -90,7 +90,7 @@ const getAllComplaints = async (req, res) => {
     const where = {};
 
     if (status) where.status = status;
-    if (room_id) where.roomId = parseInt(room_id);
+    if (room_id) where.roomId = room_id;
 
     const complaints = await prisma.complaint.findMany({
       where,
@@ -116,7 +116,7 @@ const getComplaintDetailsAdmin = async (req, res) => {
     const { id } = req.params;
 
     const complaint = await prisma.complaint.findUnique({
-      where: { id: parseInt(id) },
+      where: { id },
       include: {
         student: {
           select: { id: true, fullName: true, phone: true },
@@ -152,7 +152,7 @@ const updateComplaintStatus = async (req, res) => {
     }
 
     const complaint = await prisma.complaint.update({
-      where: { id: parseInt(id) },
+      where: { id },
       data: { status },
     });
 
