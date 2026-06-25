@@ -23,47 +23,64 @@ const buildRegistrationCheck = async (registration_id, authHeader) => {
 // POST /api/v1/payments - Create payment for registration
 const createPayment = async (req, res) => {
   try {
-    const { registration_id, amount } = req.body;
+    const registration_id = req.body.registration_id || req.body.registrationId;
+    const invoice_id = req.body.invoice_id || req.body.invoiceId;
+    const amount = req.body.amount;
+    const payment_method = req.body.payment_method || req.body.paymentMethod;
     const student_id = req.user?.id;
     const authHeader = req.headers.authorization;
 
-    if (!registration_id || !amount) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    if ((!registration_id && !invoice_id) || !amount) {
+      return res.status(400).json({ error: 'Missing registration_id/invoice_id or amount' });
     }
 
     let registration = null;
-    try {
-      registration = await buildRegistrationCheck(registration_id, authHeader);
-    } catch (error) {
-      return res.status(400).json({ error: error.message });
+    if (registration_id) {
+        try {
+            registration = await buildRegistrationCheck(registration_id, authHeader);
+        } catch (error) {
+            return res.status(400).json({ error: error.message });
+        }
+
+        if (registration) {
+            if (registration.studentId !== student_id) {
+                return res.status(403).json({ error: 'Access denied' });
+            }
+            if (registration.status !== 'APPROVED') {
+                return res.status(400).json({ error: 'Registration must be APPROVED to make payment' });
+            }
+        }
+
+        const existingPayment = await prisma.payment.findUnique({
+            where: { registrationId: registration_id },
+        });
+
+        if (existingPayment) {
+            return res.status(400).json({ error: 'Payment already exists for this registration' });
+        }
     }
 
-    if (registration) {
-      if (registration.studentId !== student_id) {
-        return res.status(403).json({ error: 'Access denied' });
-      }
-      if (registration.status !== 'APPROVED') {
-        return res.status(400).json({ error: 'Registration must be APPROVED to make payment' });
-      }
-    }
-
-    const existingPayment = await prisma.payment.findUnique({
-      where: { registrationId: registration_id },
-    });
-
-    if (existingPayment) {
-      return res.status(400).json({ error: 'Payment already exists for this registration' });
+    // IF VNPAY -> We should use the specialized VNPay logic
+    if (payment_method === 'VNPAY') {
+        const vnpay = require('./vnpayController');
+        req.body.registrationId = registration_id;
+        req.body.invoiceId = invoice_id; 
+        req.body.roomId = registration?.roomId || null; // Pass roomId if we have it
+        return vnpay.createPaymentUrl(req, res);
     }
 
     const payment = await prisma.payment.create({
       data: {
-        registrationId: registration_id,
+        registrationId: registration_id || null,
+        invoiceId: invoice_id || null,
         studentId: student_id,
         roomId: registration?.roomId || null,
         amount: parseFloat(amount),
         status: 'PENDING',
+        paymentMethod: payment_method || 'CASH',
       },
     });
+
 
     res.status(201).json({ message: 'Payment created', payment });
   } catch (error) {
@@ -189,11 +206,15 @@ const getAllPayments = async (req, res) => {
     const where = {};
 
     if (status) where.status = status;
+    
+    // Exclude VNPay payments from Admin view as per requirement
+    where.paymentMethod = { not: 'VNPAY' };
 
     const payments = await prisma.payment.findMany({
       where,
       orderBy: { id: 'desc' },
     });
+
 
     res.json(payments);
   } catch (error) {

@@ -1,4 +1,5 @@
 const prisma = require('../lib/prismaClient');
+const { publishMessage } = require('../lib/rabbitmq');
 
 // GET /api/v1/stays/me - Get own stays
 const getOwnStays = async (req, res) => {
@@ -27,11 +28,12 @@ const getOwnStays = async (req, res) => {
 // GET /api/v1/admin/stays - Get all stays (Admin only)
 const getAllStays = async (req, res) => {
   try {
-    const { status, room_id } = req.query;
+    const { status, room_id, student_id } = req.query;
     const where = {};
 
     if (status) where.status = status;
     if (room_id) where.roomId = room_id;
+    if (student_id) where.studentId = student_id;
 
     const stays = await prisma.stay.findMany({
       where,
@@ -73,6 +75,13 @@ const endStay = async (req, res) => {
       },
     });
 
+    // PUBLISH EVENT for other services to release registration
+    await publishMessage('stay_events', 'stay.updated', {
+      stayId: updated.id,
+      studentId: updated.studentId,
+      status: 'ENDED'
+    });
+
     res.json({ message: 'Stay ended', updated });
   } catch (error) {
     console.error(error);
@@ -105,6 +114,13 @@ const earlyDeparture = async (req, res) => {
       },
     });
 
+    // PUBLISH EVENT for other services to release registration
+    await publishMessage('stay_events', 'stay.updated', {
+      stayId: updated.id,
+      studentId: updated.studentId,
+      status: 'LEFT_EARLY'
+    });
+
     res.json({ message: 'Early departure recorded', updated });
   } catch (error) {
     console.error(error);
@@ -115,7 +131,7 @@ const earlyDeparture = async (req, res) => {
 // POST /api/v1/stays/admin/create - Create stay (Internal/Admin only)
 const createStay = async (req, res) => {
   try {
-    const { student_id, room_id, period_id, start_date, end_date } = req.body;
+    const { student_id, room_id, period_id, start_date, end_date, registration_date, academic_year, semester } = req.body;
 
     if (!student_id || !room_id || !period_id || !start_date) {
       return res.status(400).json({ error: 'Missing required fields' });
@@ -128,6 +144,9 @@ const createStay = async (req, res) => {
         periodId: period_id,
         startDate: new Date(start_date),
         endDate: end_date ? new Date(end_date) : null,
+        registrationDate: registration_date ? new Date(registration_date) : null,
+        academicYear: academic_year || null,
+        semester: semester || null,
         status: 'ACTIVE',
       },
     });

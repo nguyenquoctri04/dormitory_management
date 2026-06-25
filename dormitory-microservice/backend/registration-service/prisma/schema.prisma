@@ -18,9 +18,11 @@ model Registration {
   endDate           DateTime           @map("end_date")
   type              String             // MANUAL, AUTO
   status            RegistrationStatus @default(PENDING)
+  paymentMethod     String?            @map("payment_method") @default("CASH")
   academicYear      String?            @map("academic_year")
   semester          String?
   rejectionReason   String?            @map("rejection_reason")
+  registrationDate  DateTime?          @map("registration_date")
   createdAt         DateTime           @map("created_at") @default(now())
   updatedAt         DateTime           @map("updated_at") @default(now()) @updatedAt
 

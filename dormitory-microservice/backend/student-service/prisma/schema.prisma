@@ -12,6 +12,7 @@ model Student {
   userId      String     @unique @map("user_id") @db.ObjectId
   fullName    String?    @map("full_name")
   phone       String?
+  studentCode String?    @map("student_code")
   gender      GenderType
   dateOfBirth DateTime?  @map("date_of_birth")
   status      String     @default("ACTIVE")

@@ -1,51 +1,72 @@
 const prisma = require('../lib/prismaClient');
+const { publishMessage } = require('../lib/rabbitmq');
 
-const createStayRecord = async (data, authHeader) => {
-  const roomServiceUrl = process.env.ROOM_SERVICE_URL || 'http://localhost:3003';
-  
-  try {
-    const response = await fetch(`${roomServiceUrl}/api/v1/stays/admin/create`, {
-      method: 'POST',
-      headers: {
-        Authorization: authHeader || '',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
-    });
-
-    if (!response.ok) {
-      const err = await response.json();
-      throw new Error(err.error || 'Failed to create stay record in room service');
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error('Inter-service error (Room Service):', error);
-    throw error;
-  }
-};
 
 
 // POST /api/v1/registrations - Create registration
 const createRegistration = async (req, res) => {
   try {
-    const { requested_room_type, requested_gender, period_id, start_date, end_date, type, room_id, academic_year, semester } = req.body;
+    const { requested_room_type, requested_gender, period_id, start_date, end_date, type, room_id, academic_year, semester, payment_method } = req.body;
     const student_id = req.user?.id;
 
     if (!requested_room_type || !requested_gender || !period_id || !start_date || !end_date || !type) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // 1. STRICTOR CHECK: Block if student has ANY active/valid registration record
+    // This includes: PENDING (Cash/VNPay paid), WAITING_PAYMENT (VNPay pending), APPROVED (Ready to check-in), COMPLETED (Already checked-in)
+    // We check for ANY semester if they are currently residing or have an approved slot.
     const activeReg = await prisma.registration.findFirst({
       where: {
         studentId: student_id,
-        status: { in: ['PENDING', 'APPROVED', 'WAITING_PAYMENT'] },
+        status: { in: ['PENDING', 'WAITING_PAYMENT', 'APPROVED', 'COMPLETED'] },
       },
+      orderBy: { createdAt: 'desc' }
     });
 
     if (activeReg) {
-      return res.status(400).json({ error: 'Student already has an active registration' });
+      let statusMsg = '';
+      switch(activeReg.status) {
+        case 'PENDING': statusMsg = 'đang chờ xử lý'; break;
+        case 'WAITING_PAYMENT': statusMsg = 'đang chờ thanh toán'; break;
+        case 'APPROVED': statusMsg = 'đã được duyệt'; break;
+        case 'COMPLETED': statusMsg = 'đã hoàn tất (bạn đang cư trú)'; break;
+      }
+      return res.status(400).json({ error: `Bạn không thể đăng ký thêm vì đang có đơn ${statusMsg}.` });
     }
+
+    // 2. New Self-Healing Logic: Verify Real-time Active Stay Status
+    // We trust Room Service more than our own records for "already occupied" status.
+    let hasActiveStay = false;
+    try {
+      const stayUrl = `http://room-service:3003/api/v1/stays/admin/list?student_id=${student_id}&status=ACTIVE`;
+      const stayResponse = await fetch(stayUrl, {
+        headers: { 'Authorization': `Bearer ${process.env.INTERNAL_TOKEN || 'internal-secret'}` }
+      });
+      if (stayResponse.ok) {
+        const activeStays = await stayResponse.json();
+        if (activeStays && activeStays.length > 0) {
+          hasActiveStay = true;
+        }
+      }
+    } catch (err) {
+      console.error('⚠️ Could not verify active stay with Room Service:', err.message);
+      // Fallback: If room service is unreachable, we check if there's an APPROVED/COMPLETED reg
+      const backupCheck = await prisma.registration.findFirst({
+        where: {
+          studentId: student_id,
+          status: { in: ['APPROVED', 'COMPLETED'] },
+        },
+      });
+      if (backupCheck) hasActiveStay = true;
+    }
+
+    if (hasActiveStay) {
+      return res.status(400).json({ error: 'Bạn hiện đang có một lượt ở đang hoạt động. Vui lòng hoàn tất hoặc kết thúc lượt ở trước khi đăng ký mới.' });
+    }
+
+    // Strict detector
+    const isVnpay = String(req.body.payment_method || req.body.paymentMethod || '').toUpperCase().includes('VNPAY');
 
     const registration = await prisma.registration.create({
       data: {
@@ -57,10 +78,24 @@ const createRegistration = async (req, res) => {
         startDate: new Date(start_date),
         endDate: new Date(end_date),
         type,
-        status: 'PENDING',
+        status: isVnpay ? 'WAITING_PAYMENT' : 'PENDING',
+        paymentMethod: isVnpay ? 'VNPAY' : 'CASH',
         academicYear: academic_year,
         semester: semester,
+        registrationDate: new Date(),
       },
+    });
+
+    // PUBLISH EVENT for Invoice Creation
+    // We'll pass the amount if provided, or something to help payment-service calculate
+    await publishMessage('registration_events', 'registration.created', {
+      registrationId: registration.id,
+      studentId: registration.studentId,
+      roomId: registration.roomId,
+      amount: req.body.amount, // Expecting frontend to send this now
+      academicYear: registration.academicYear,
+      semester: registration.semester,
+      paymentMethod: registration.paymentMethod
     });
 
     res.status(201).json({ message: 'Registration created', registration });
@@ -130,10 +165,18 @@ const cancelRegistration = async (req, res) => {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    if (registration.status !== 'PENDING') {
-      return res.status(400).json({ error: 'Can only cancel PENDING registrations' });
+    // Allow cancelling PENDING (cash) and WAITING_PAYMENT (incomplete VNPay)
+    if (!['PENDING', 'WAITING_PAYMENT'].includes(registration.status)) {
+      return res.status(400).json({ error: `Không thể hủy đơn ở trạng thái "${registration.status}". Chỉ có thể hủy đơn đang chờ xử lý.` });
     }
 
+    // For WAITING_PAYMENT (incomplete VNPay), just delete the record entirely so student can re-register
+    if (registration.status === 'WAITING_PAYMENT') {
+      await prisma.registration.delete({ where: { id } });
+      return res.json({ message: 'Registration cancelled and removed (incomplete payment)' });
+    }
+
+    // For PENDING (cash), mark as REJECTED
     const updated = await prisma.registration.update({
       where: { id },
       data: { status: 'REJECTED' },
@@ -152,7 +195,9 @@ const getAllRegistrations = async (req, res) => {
     const { status } = req.query;
     const where = {};
 
-    if (status) where.status = status;
+    if (status) {
+      where.status = status;
+    }
 
     const registrations = await prisma.registration.findMany({
       where,
@@ -216,20 +261,12 @@ const approveRegistration = async (req, res) => {
       },
     });
 
-    // Notify room service to create a Stay
-    try {
-      await createStayRecord({
-        student_id: registration.studentId,
-        room_id: room_id,
-        period_id: registration.periodId,
-        start_date: registration.startDate,
-        end_date: registration.endDate,
-      }, req.headers.authorization);
-    } catch (stayError) {
-      console.warn('Stay creation failed, but registration was approved:', stayError.message);
-      // We don't rollback registration approval because stay can be created manually if needed, 
-      // but you might want to handle this differently in production.
-    }
+    // PUBLISH EVENT for Payment Confirmation (In-person flow)
+    await publishMessage('registration_events', 'registration.approved', {
+      registrationId: updated.id,
+      studentId: updated.studentId,
+      status: 'APPROVED'
+    });
 
     res.json({ message: 'Registration approved', updated });
   } catch (error) {
@@ -259,10 +296,16 @@ const rejectRegistration = async (req, res) => {
 
     const updated = await prisma.registration.update({
       where: { id },
-      data: { 
+      data: {
         status: 'REJECTED',
-        rejectionReason: rejection_reason || null,
+        rejectionReason: rejection_reason || 'Bị từ chối bởi nhân viên quản lý',
       },
+    });
+
+    // PUBLISH EVENT for Payment Service to cleanup invoices
+    await publishMessage('registration_events', 'registration.rejected', {
+      registrationId: updated.id,
+      studentId: updated.studentId
     });
 
     res.json({ message: 'Registration rejected', updated });

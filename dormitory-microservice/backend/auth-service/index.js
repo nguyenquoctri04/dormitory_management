@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 const authRoutes = require('./routes/authRoutes');
 const { PrismaClient } = require('@prisma/client');
+const { connectRabbitMQ } = require('./lib/rabbitmq');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -23,6 +24,7 @@ async function startServer() {
     try {
       await prisma.$connect();
       console.log('✅ Connected to MongoDB with Prisma');
+      await connectRabbitMQ();
       break;
     } catch (error) {
       console.error(`❌ Failed to connect to database. Retries left: ${retries - 1}`);

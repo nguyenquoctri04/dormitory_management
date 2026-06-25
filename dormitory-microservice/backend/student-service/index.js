@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 const studentRoutes = require('./routes/studentRoutes');
 const { PrismaClient } = require('@prisma/client');
+const { consumeUserEvents } = require('./lib/rabbitmq');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -21,6 +22,7 @@ async function startServer() {
   try {
     await prisma.$connect();
     console.log('✅ Connected to MongoDB with Prisma');
+    consumeUserEvents();
 
     app.listen(PORT, () => {
       console.log(`🚀 Student Service is running on port ${PORT}`);

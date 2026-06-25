@@ -14,7 +14,10 @@ model Utility {
   year             Int
   electricityIndex Int      @map("electricity_index")
   waterIndex       Int      @map("water_index")
+  electricityUsage Int      @map("electricity_usage") @default(0)
+  waterUsage       Int      @map("water_usage")       @default(0)
   totalAmount      Float    @map("total_amount")
+  status           String   @default("UNPAID") // UNPAID, PARTIALLY_PAID, PAID
   createdAt        DateTime @map("created_at") @default(now())
 
   @@unique([roomId, month, year])

@@ -31,6 +31,16 @@ services:
       utility-service:
         condition: service_started
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+
   auth-service:
     build: ./auth-service
     container_name: auth-service
@@ -61,6 +71,7 @@ services:
       - DATABASE_URL=${DATABASE_URL_ROOM}
       - PORT=3003
       - JWT_SECRET=access-secret-key
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
 
   registration-service:
     build: ./registration-service
@@ -71,6 +82,7 @@ services:
       - DATABASE_URL=${DATABASE_URL_REGISTRATION}
       - PORT=3004
       - JWT_SECRET=access-secret-key
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
 
   payment-service:
     build: ./payment-service
@@ -81,6 +93,12 @@ services:
       - DATABASE_URL=${DATABASE_URL_PAYMENT}
       - PORT=3005
       - JWT_SECRET=access-secret-key
+      - vnp_TmnCode=${vnp_TmnCode}
+      - vnp_HashSecret=${vnp_HashSecret}
+      - vnp_Url=${vnp_Url}
+      - VNP_RETURN_URL=${VNP_RETURN_URL}
+      - vnp_ApiUrl=${vnp_ApiUrl}
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
 
   complaint-service:
     build: ./complaint-service

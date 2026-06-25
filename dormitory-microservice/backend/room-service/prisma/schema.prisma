@@ -30,8 +30,6 @@ model Period {
   createdAt      DateTime @map("created_at") @default(now())
   updatedAt      DateTime @map("updated_at") @default(now()) @updatedAt
 
-  stays          Stay[]
-
   @@map("periods")
 }
 
@@ -39,15 +37,18 @@ model Stay {
   id         String    @id @default(auto()) @map("_id") @db.ObjectId
   studentId  String    @map("student_id") @db.ObjectId
   roomId     String    @map("room_id") @db.ObjectId
-  periodId   String    @map("period_id") @db.ObjectId
+  periodId   String    @map("period_id")
   startDate  DateTime  @map("start_date") @default(now())
   endDate    DateTime? @map("end_date")
+  academicYear String?   @map("academic_year")
+  semester     String?
   status     StayStatus @default(ACTIVE)
+  registrationDate DateTime? @map("registration_date")
   createdAt  DateTime   @map("created_at") @default(now())
   updatedAt  DateTime   @map("updated_at") @default(now()) @updatedAt
 
   room       Room      @relation(fields: [roomId], references: [id])
-  period     Period    @relation(fields: [periodId], references: [id])
+  earlyDepartureRequests EarlyDepartureRequest[]
 
   @@map("stays")
 }
@@ -62,6 +63,27 @@ enum GenderType {
   FEMALE
 }
 
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model EarlyDepartureRequest {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  stayId          String      @map("stay_id") @db.ObjectId
+  studentId       String      @map("student_id") @db.ObjectId
+  reason          String?
+  requestDate     DateTime    @map("request_date") @default(now())
+  status          RequestStatus @default(PENDING)
+  approvedAt      DateTime?   @map("approved_at")
+  processedBy     String?     @map("processed_by") @db.ObjectId
+  
+  stay            Stay        @relation(fields: [stayId], references: [id])
+
+  @@map("early_departure_requests")
+}
 
 enum StayStatus {
   ACTIVE

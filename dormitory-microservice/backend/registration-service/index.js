@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const registrationRoutes = require('./routes/registrationRoutes');
+const { consumePaymentEvents, consumeUserEvents, consumeStayEvents } = require('./lib/rabbitmq');
 const { PrismaClient } = require('@prisma/client');
 
 const app = express();
@@ -21,6 +22,11 @@ async function startServer() {
   try {
     await prisma.$connect();
     console.log('✅ Connected to MongoDB with Prisma');
+    
+    // Start RabbitMQ Consumers
+    consumePaymentEvents();
+    consumeUserEvents();
+    consumeStayEvents();
 
     app.listen(PORT, () => {
       console.log(`🚀 Registration Service is running on port ${PORT}`);

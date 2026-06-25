@@ -8,14 +8,15 @@ datasource db {
 }
 
 model Complaint {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  studentId   String   @map("student_id") @db.ObjectId
-  roomId      String   @map("room_id") @db.ObjectId
-  title       String
-  description String
-  status      String   @default("PENDING")
-  createdAt   DateTime @map("created_at") @default(now())
-  updatedAt   DateTime @map("updated_at") @default(now()) @updatedAt
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId     String   @map("student_id") @db.ObjectId
+  roomId        String   @map("room_id") @db.ObjectId
+  title         String
+  description   String
+  staffResponse String?  @map("staff_response")
+  status        String   @default("PENDING")
+  createdAt     DateTime @map("created_at") @default(now())
+  updatedAt     DateTime @map("updated_at") @default(now()) @updatedAt
 
   @@map("complaints")
 }

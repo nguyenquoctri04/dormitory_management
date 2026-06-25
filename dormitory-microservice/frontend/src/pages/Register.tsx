@@ -9,7 +9,6 @@ export default function Register() {
     email: '',
     password: '',
     confirmPassword: '',
-    full_name: '',
   })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -26,7 +25,7 @@ export default function Register() {
     setSuccess('')
 
     // Validation
-    if (!formData.email || !formData.password || !formData.full_name) {
+    if (!formData.email || !formData.password) {
       setError('Vui lòng điền đầy đủ thông tin bắt buộc')
       return
     }
@@ -46,7 +45,6 @@ export default function Register() {
       await api.registerStudent({
         email: formData.email,
         password: formData.password,
-        full_name: formData.full_name,
       })
       setSuccess('Đăng ký thành công! Đang chuyển hướng đến trang đăng nhập...')
       setTimeout(() => {
@@ -88,18 +86,6 @@ export default function Register() {
               value={formData.email}
               onChange={handleChange}
               placeholder="Nhập email"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Họ và tên</label>
-            <input
-              type="text"
-              name="full_name"
-              value={formData.full_name}
-              onChange={handleChange}
-              placeholder="Nhập họ và tên"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none"
             />
           </div>

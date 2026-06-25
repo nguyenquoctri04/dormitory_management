@@ -6,6 +6,7 @@ const {
   verifyRefreshToken 
 } = require('../utils/jwt');
 const { addToken } = require('../utils/tokenBlacklist');
+const { publishMessage } = require('../lib/rabbitmq');
 
 const getDisplayName = (email) => {
   const prefix = email.split('@')[0] || email;
@@ -333,6 +334,10 @@ async function deleteUser(req, res) {
   try {
     const { id } = req.params;
     await prisma.user.delete({ where: { id } });
+    
+    // Broadcast deletion to other services
+    await publishMessage('user_events', 'user.deleted', { userId: id });
+    
     res.status(200).json({ message: 'User deleted' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete user' });

@@ -1,11 +1,13 @@
 // src/lib/api.ts
-const AUTH_BASE_URL = import.meta.env.VITE_AUTH_URL || 'http://localhost:3001';
-const STUDENT_BASE_URL = import.meta.env.VITE_STUDENT_URL || 'http://localhost:3002';
-const ROOM_BASE_URL = import.meta.env.VITE_ROOM_URL || 'http://localhost:3002';
-const REGISTRATION_BASE_URL = import.meta.env.VITE_REGISTRATION_URL || 'http://localhost:3002';
-const PAYMENT_BASE_URL = import.meta.env.VITE_PAYMENT_URL || 'http://localhost:3003';
-const COMPLAINT_BASE_URL = import.meta.env.VITE_COMPLAINT_URL || 'http://localhost:3002';
-const UTILITY_BASE_URL = import.meta.env.VITE_UTILITY_URL || 'http://localhost:3002';
+const API_GATEWAY_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
+const AUTH_BASE_URL = API_GATEWAY_URL;
+const STUDENT_BASE_URL = API_GATEWAY_URL;
+const ROOM_BASE_URL = API_GATEWAY_URL;
+const REGISTRATION_BASE_URL = API_GATEWAY_URL;
+const PAYMENT_BASE_URL = API_GATEWAY_URL;
+const COMPLAINT_BASE_URL = API_GATEWAY_URL;
+const UTILITY_BASE_URL = API_GATEWAY_URL;
 
 export interface AuthResponse {
   token: string;
@@ -71,6 +73,21 @@ async function refreshToken(token: string) {
   return response.json();
 }
 
+async function changePassword(token: string, data: any) {
+  const response = await fetch(`${AUTH_BASE_URL}/api/v1/auth/change-password`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'Change password failed');
+  }
+
+  return response.json();
+}
+
 // ROOMS APIs
 async function getRooms(token: string) {
   const response = await fetch(`${ROOM_BASE_URL}/api/v1/rooms`, {
@@ -101,7 +118,7 @@ async function getRoom(token: string, id: string) {
 }
 
 async function createRoom(token: string, data: any) {
-  const response = await fetch(`${ROOM_BASE_URL}/api/v1/admin/rooms`, {
+  const response = await fetch(`${ROOM_BASE_URL}/api/v1/rooms/admin/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
@@ -116,7 +133,7 @@ async function createRoom(token: string, data: any) {
 }
 
 async function updateRoom(token: string, id: string, data: any) {
-  const response = await fetch(`${ROOM_BASE_URL}/api/v1/admin/rooms/${id}`, {
+  const response = await fetch(`${ROOM_BASE_URL}/api/v1/rooms/admin/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
@@ -131,7 +148,7 @@ async function updateRoom(token: string, id: string, data: any) {
 }
 
 async function deleteRoom(token: string, id: string) {
-  const response = await fetch(`${ROOM_BASE_URL}/api/v1/admin/rooms/${id}`, {
+  const response = await fetch(`${ROOM_BASE_URL}/api/v1/rooms/admin/${id}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   });
@@ -175,7 +192,7 @@ async function updateStudentProfile(token: string, data: any) {
 }
 
 async function getStudents(token: string) {
-  const response = await fetch(`${STUDENT_BASE_URL}/api/v1/admin/students`, {
+  const response = await fetch(`${STUDENT_BASE_URL}/api/v1/students/admin/list`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   });
@@ -189,7 +206,7 @@ async function getStudents(token: string) {
 }
 
 async function getStudent(token: string, id: string) {
-  const response = await fetch(`${STUDENT_BASE_URL}/api/v1/admin/students/${id}`, {
+  const response = await fetch(`${STUDENT_BASE_URL}/api/v1/students/admin/${id}`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   });
@@ -211,8 +228,14 @@ async function createRegistration(token: string, data: any) {
   });
 
   if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.error || 'Create registration failed');
+    let errorMessage = 'Create registration failed';
+    try {
+      const err = await response.json();
+      errorMessage = err.error || errorMessage;
+    } catch (e) {
+      errorMessage = `Error ${response.status}: ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
   }
 
   return response.json();
@@ -261,7 +284,7 @@ async function cancelRegistration(token: string, id: string) {
 }
 
 async function getRegistrations(token: string) {
-  const response = await fetch(`${REGISTRATION_BASE_URL}/api/v1/admin/registrations`, {
+  const response = await fetch(`${REGISTRATION_BASE_URL}/api/v1/registrations/admin/list`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   });
@@ -275,7 +298,7 @@ async function getRegistrations(token: string) {
 }
 
 async function approveRegistration(token: string, id: string, data: any) {
-  const response = await fetch(`${REGISTRATION_BASE_URL}/api/v1/admin/registrations/${id}/approve`, {
+  const response = await fetch(`${REGISTRATION_BASE_URL}/api/v1/registrations/admin/${id}/approve`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
@@ -289,11 +312,13 @@ async function approveRegistration(token: string, id: string, data: any) {
   return response.json();
 }
 
-async function rejectRegistration(token: string, id: string) {
-  const response = await fetch(`${REGISTRATION_BASE_URL}/api/v1/admin/registrations/${id}/reject`, {
+async function rejectRegistration(token: string, id: string, data?: any) {
+  const response = await fetch(`${REGISTRATION_BASE_URL}/api/v1/registrations/admin/${id}/reject`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: data ? JSON.stringify(data) : undefined,
   });
+
 
   if (!response.ok) {
     const err = await response.json();
@@ -362,7 +387,7 @@ async function confirmPayment(token: string, id: string) {
 }
 
 async function getPayments(token: string) {
-  const response = await fetch(`${PAYMENT_BASE_URL}/api/v1/admin/payments`, {
+  const response = await fetch(`${PAYMENT_BASE_URL}/api/v1/payments/admin/list`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   });
@@ -372,6 +397,15 @@ async function getPayments(token: string) {
     throw new Error(err.error || 'Fetch payments failed');
   }
 
+  return response.json();
+}
+
+async function rollbackPayment(token: string, paymentId: string) {
+  const response = await fetch(`${PAYMENT_BASE_URL}/api/v1/payments/vnpay/rollback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ paymentId }),
+  });
   return response.json();
 }
 
@@ -405,7 +439,7 @@ async function getInvoice(token: string, id: string) {
 }
 
 async function getInvoices(token: string) {
-  const response = await fetch(`${PAYMENT_BASE_URL}/api/v1/admin/invoices`, {
+  const response = await fetch(`${PAYMENT_BASE_URL}/api/v1/invoices/admin/list`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   });
@@ -448,7 +482,7 @@ async function getStay(token: string, id: string) {
 }
 
 async function getStays(token: string) {
-  const response = await fetch(`${ROOM_BASE_URL}/api/v1/admin/stays`, {
+  const response = await fetch(`${ROOM_BASE_URL}/api/v1/stays/admin/list`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   });
@@ -462,7 +496,7 @@ async function getStays(token: string) {
 }
 
 async function endStay(token: string, id: string) {
-  const response = await fetch(`${ROOM_BASE_URL}/api/v1/admin/stays/${id}/end`, {
+  const response = await fetch(`${ROOM_BASE_URL}/api/v1/stays/admin/${id}/end`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   });
@@ -489,6 +523,84 @@ async function leaveEarlyStay(token: string, id: string) {
   return response.json();
 }
 
+async function createStay(token: string, data: any) {
+  const response = await fetch(`${ROOM_BASE_URL}/api/v1/stays/admin/create`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'Create stay failed');
+  }
+
+  return response.json();
+}
+
+async function requestEarlyDeparture(token: string, data: { stay_id: string; reason?: string }) {
+  const response = await fetch(`${ROOM_BASE_URL}/api/v1/stays/early-departure`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    let errorMessage = 'Request early departure failed';
+    try {
+      const err = await response.json();
+      errorMessage = err.error || errorMessage;
+    } catch (e) {
+      errorMessage = `Error ${response.status}: ${response.statusText}`;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return response.json();
+}
+
+async function getEarlyDepartureRequests(token: string) {
+  const response = await fetch(`${ROOM_BASE_URL}/api/v1/stays/admin/early-departures`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'Fetch failed');
+  }
+
+  return response.json();
+}
+
+async function approveEarlyDeparture(token: string, id: string) {
+  const response = await fetch(`${ROOM_BASE_URL}/api/v1/stays/admin/early-departures/${id}/approve`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'Approval failed');
+  }
+
+  return response.json();
+}
+
+async function rejectEarlyDeparture(token: string, id: string) {
+  const response = await fetch(`${ROOM_BASE_URL}/api/v1/stays/admin/early-departures/${id}/reject`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'Rejection failed');
+  }
+
+  return response.json();
+}
+
 // UTILITIES APIs
 async function getMyUtilities(token: string) {
   const response = await fetch(`${UTILITY_BASE_URL}/api/v1/utilities/me`, {
@@ -505,7 +617,7 @@ async function getMyUtilities(token: string) {
 }
 
 async function getUtilities(token: string) {
-  const response = await fetch(`${UTILITY_BASE_URL}/api/v1/admin/utilities`, {
+  const response = await fetch(`${UTILITY_BASE_URL}/api/v1/utilities/admin/list`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   });
@@ -519,7 +631,7 @@ async function getUtilities(token: string) {
 }
 
 async function createUtility(token: string, data: any) {
-  const response = await fetch(`${UTILITY_BASE_URL}/api/v1/admin/utilities`, {
+  const response = await fetch(`${UTILITY_BASE_URL}/api/v1/utilities/admin/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
@@ -578,7 +690,7 @@ async function getComplaint(token: string, id: string) {
 }
 
 async function getComplaints(token: string) {
-  const response = await fetch(`${COMPLAINT_BASE_URL}/api/v1/admin/complaints`, {
+  const response = await fetch(`${COMPLAINT_BASE_URL}/api/v1/complaints/admin/list`, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
   });
@@ -592,7 +704,7 @@ async function getComplaints(token: string) {
 }
 
 async function updateComplaintStatus(token: string, id: string, data: any) {
-  const response = await fetch(`${COMPLAINT_BASE_URL}/api/v1/admin/complaints/${id}/status`, {
+  const response = await fetch(`${COMPLAINT_BASE_URL}/api/v1/complaints/admin/${id}/status`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     body: JSON.stringify(data),
@@ -622,6 +734,115 @@ async function registerStudent(data: any) {
   return response.json();
 }
 
+// ADMIN - AUTH APIs
+async function getUsers(token: string) {
+  const response = await fetch(`${AUTH_BASE_URL}/api/v1/auth/users`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'Fetch users failed');
+  }
+
+  return response.json();
+}
+
+async function createStaff(token: string, data: any) {
+  const response = await fetch(`${AUTH_BASE_URL}/api/v1/auth/admin/staff`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'Create staff failed');
+  }
+
+  return response.json();
+}
+
+async function updateUserStatus(token: string, id: string, status: string) {
+  const response = await fetch(`${AUTH_BASE_URL}/api/v1/auth/users/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ status }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'Update status failed');
+  }
+
+  return response.json();
+}
+
+async function updateUserRole(token: string, id: string, role: string) {
+  const response = await fetch(`${AUTH_BASE_URL}/api/v1/auth/users/${id}/role`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ role }),
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'Update role failed');
+  }
+
+  return response.json();
+}
+
+async function deleteUser(token: string, id: string) {
+  const response = await fetch(`${AUTH_BASE_URL}/api/v1/auth/users/${id}`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'Delete user failed');
+  }
+
+  return response.json();
+}
+
+async function createVnpayUrl(token: string, data: { registrationId: string; amount: number; bankCode?: string }) {
+  const response = await fetch(`${PAYMENT_BASE_URL}/api/v1/payments/vnpay/create-url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    const err = await response.json();
+    throw new Error(err.error || 'Failed to create VNPay URL');
+  }
+
+  return response.json();
+}
+
+/**
+ * Called after VNPay redirects the user back to our return URL with a successful response.
+ * Sends the full vnp_* params to the backend so it can re-verify the signature and
+ * fire the payment.completed event to approve the registration and create the stay.
+ */
+async function confirmVnpayPayment(token: string, vnpParams: Record<string, string>) {
+  const response = await fetch(`${PAYMENT_BASE_URL}/api/v1/payments/vnpay/confirm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(vnpParams),
+  });
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to confirm VNPay payment');
+  }
+
+  return response.json();
+}
+
 // Export api object with all functions
 export const api = {
   // Auth
@@ -629,6 +850,13 @@ export const api = {
   logout,
   getCurrentUser,
   refreshToken,
+  changePassword,
+  // Admin Auth
+  getUsers,
+  createStaff,
+  updateUserStatus,
+  updateUserRole,
+  deleteUser,
   // Rooms
   getRooms,
   getRoom,
@@ -654,6 +882,8 @@ export const api = {
   getPayment,
   confirmPayment,
   getPayments,
+  createVnpayUrl,
+  confirmVnpayPayment,
   // Invoices
   getMyInvoices,
   getInvoice,
@@ -662,8 +892,14 @@ export const api = {
   getMyStays,
   getStay,
   getStays,
+  createStay,
   endStay,
   leaveEarlyStay,
+  requestEarlyDeparture,
+  getEarlyDepartureRequests,
+  approveEarlyDeparture,
+  rejectEarlyDeparture,
+  rollbackPayment,
   // Utilities
   getMyUtilities,
   getUtilities,
@@ -676,7 +912,7 @@ export const api = {
   updateComplaintStatus,
   // Register
   registerStudent,
-}
+};
 
 // Also export individual functions for backward compatibility
 export {
@@ -684,4 +920,7 @@ export {
   logout,
   getCurrentUser,
   refreshToken,
-}
+  createVnpayUrl,
+  confirmVnpayPayment,
+  rollbackPayment,
+};

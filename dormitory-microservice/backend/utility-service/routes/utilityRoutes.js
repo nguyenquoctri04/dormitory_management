@@ -13,11 +13,11 @@ const {
 const router = express.Router();
 
 // Student routes
-router.post('/', authMiddleware, createUtility);
 router.get('/me', authMiddleware, getOwnUtilities);
 router.get('/:id', authMiddleware, getUtilityDetails);
 
 // Admin routes
+router.post('/admin/create', authMiddleware, adminMiddleware, createUtility);
 router.get('/admin/list', authMiddleware, adminMiddleware, getAllUtilities);
 router.get('/admin/:id', authMiddleware, adminMiddleware, getUtilityDetailsAdmin);
 router.patch('/admin/:id', authMiddleware, adminMiddleware, updateUtility);

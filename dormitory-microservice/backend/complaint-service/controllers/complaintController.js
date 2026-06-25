@@ -112,7 +112,7 @@ const getComplaintDetailsAdmin = async (req, res) => {
 const updateComplaintStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, staff_response } = req.body;
 
     if (!status) {
       return res.status(400).json({ error: 'status is required' });
@@ -125,7 +125,10 @@ const updateComplaintStatus = async (req, res) => {
 
     const complaint = await prisma.complaint.update({
       where: { id },
-      data: { status },
+      data: { 
+        status,
+        staffResponse: staff_response || undefined
+      },
     });
 
     res.json({ message: 'Complaint status updated', complaint });

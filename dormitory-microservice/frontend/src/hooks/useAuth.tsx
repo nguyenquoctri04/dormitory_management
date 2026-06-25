@@ -14,16 +14,21 @@ export function useProvideAuth() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const saved = localStorage.getItem(TOKEN_KEY)
-    const expiry = localStorage.getItem(EXPIRY_KEY)
-    if (saved && expiry && new Date().getTime() < new Date(expiry).getTime()) {
-      setToken(saved)
-      fetchUser(saved)
-    } else {
-      localStorage.removeItem(TOKEN_KEY)
-      localStorage.removeItem(EXPIRY_KEY)
+    const initializeAuth = async () => {
+      const saved = localStorage.getItem(TOKEN_KEY)
+      const expiry = localStorage.getItem(EXPIRY_KEY)
+      
+      if (saved && expiry && new Date().getTime() < new Date(expiry).getTime()) {
+        setToken(saved)
+        await fetchUser(saved)
+      } else {
+        localStorage.removeItem(TOKEN_KEY)
+        localStorage.removeItem(EXPIRY_KEY)
+      }
+      setIsLoading(false)
     }
-    setIsLoading(false)
+    
+    initializeAuth()
   }, [])
 
   useEffect(() => {

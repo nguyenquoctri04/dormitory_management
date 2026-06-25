@@ -1,13 +1,33 @@
 const prisma = require('../lib/prismaClient');
+const { publishMessage } = require('../lib/rabbitmq');
 
 const createUtility = async (req, res) => {
   try {
-    const { room_id, month, year, electricity_index, water_index, total_amount } = req.body;
+    const { room_id, month, year, electricity_index, water_index } = req.body;
 
-    if (!room_id || !month || !year || electricity_index == null || water_index == null || total_amount == null) {
+    if (!room_id || !month || !year || electricity_index == null || water_index == null) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
+    // 1. Fetch Previous Month's Utility Record to calculate usage
+    // We look for the most recent record before this month/year for this room
+    const prevUtility = await prisma.utility.findFirst({
+        where: { roomId: room_id },
+        orderBy: [{ year: 'desc' }, { month: 'desc' }]
+    });
+
+    const prevElec = prevUtility ? prevUtility.electricityIndex : 0;
+    const prevWater = prevUtility ? prevUtility.waterIndex : 0;
+
+    const electricityUsage = Math.max(0, parseInt(electricity_index) - prevElec);
+    const waterUsage = Math.max(0, parseInt(water_index) - prevWater);
+
+    // 2. Constants for Pricing
+    const ELEC_PRICE = 3000;
+    const WATER_PRICE = 12000;
+    const totalAmount = (electricityUsage * ELEC_PRICE) + (waterUsage * WATER_PRICE);
+
+    // 3. Create Utility Record
     const utility = await prisma.utility.create({
       data: {
         roomId: room_id,
@@ -15,11 +35,23 @@ const createUtility = async (req, res) => {
         year: parseInt(year),
         electricityIndex: parseInt(electricity_index),
         waterIndex: parseInt(water_index),
-        totalAmount: total_amount,
+        electricityUsage,
+        waterUsage,
+        totalAmount,
+        status: 'UNPAID'
       },
     });
 
-    res.status(201).json({ message: 'Utility record created', utility });
+    // 4. PUBLISH EVENT for Payment Service to Create Split Invoices
+    await publishMessage('registration_events', 'utility.created', {
+        utilityId: utility.id,
+        roomId: utility.roomId,
+        month: utility.month,
+        year: utility.year,
+        totalAmount: utility.totalAmount
+    });
+
+    res.status(201).json({ message: 'Utility record created and pending split invoices', utility });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });

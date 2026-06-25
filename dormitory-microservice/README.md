@@ -1,93 +1,109 @@
-# Hệ Thống Quản Lý Ký Túc Xá (Dormitory Management System)
+# 🏨 Dormitory Microservice Management System
 
-Chào mừng bạn đến với hệ thống quản lý ký túc xá được xây dựng trên kiến trúc **Microservices**. Hệ thống bao gồm một bộ backend mạnh mẽ sử dụng Node.js, Prisma, MySQL và một frontend hiện đại sử dụng React + Vite.
-
-## 🏗 Kiến Trúc Hệ Thống
-
-Hệ thống được chia thành nhiều dịch vụ nhỏ (microservices) để đảm bảo tính mở rộng và dễ dàng bảo trì:
-
-- **API Gateway (8080):** Điểm đầu vào duy nhất cho mọi yêu cầu từ frontend, chịu trách nhiệm định tuyến và xác thực JWT.
-- **Auth Service (3001):** Quản lý đăng ký, đăng nhập và cấp phát Token (Access & Refresh).
-- **Student Service (3002):** Quản lý thông tin hồ sơ sinh viên.
-- **Room Service (3003):** Quản lý thông tin phòng, loại phòng và tình trạng phòng.
-- **Registration Service (3004):** Xử lý việc đăng ký phòng của sinh viên.
-- **Payment Service (3005):** Quản lý hóa đơn và thanh toán.
-- **Complaint Service (3006):** Tiếp nhận và xử lý khiếu nại/báo hỏng.
-- **Utility Service (3007):** Quản lý điện, nước và các dịch vụ tiện ích.
-
-## 📋 Yêu Cầu Hệ Thống
-
-Trước khi bắt đầu, hãy đảm bảo máy tính của bạn đã cài đặt:
-
-- [Docker](https://www.docker.com/products/docker-desktop/) & [Docker Compose](https://docs.docker.com/compose/install/)
-- [Node.js](https://nodejs.org/) (Phiên bản 18 trở lên)
-- [npm](https://www.npmjs.com/) hoặc [yarn](https://yarnpkg.com/)
+Hệ thống quản lý ký túc xá toàn diện được thiết kế theo kiến trúc **Microservices**, tập trung vào tính tự động hóa, hiệu năng cao và trải nghiệm người dùng hiện đại.
 
 ---
 
-## 🚀 Hướng Dẫn Chạy Hệ Thống
+## 💻 Công Nghệ Cốt Lõi (Tech Stack)
 
-### 1. Khởi chạy Backend (Docker)
+### **Backend (Microservices)**
 
-Toàn bộ backend (bao gồm database và các dịch vụ) đã được cấu hình để chạy bằng Docker Compose.
+- **Runtime:** Node.js v18+ (Express Framework)
+- **Database:** MongoDB (Kiến trúc Database-per-Service)
+- **ORM:** Prisma v5.22.0
+- **API Gateway:** Dựa trên `http-proxy-middleware`, xử lý Routing và Authentication (JWT) tập trung.
+- **Xác thực:** JWT (Access Token & Refresh Token), Bcrypt (mã hóa mật khẩu).
+- **Giao tiếp:** REST API (JSON), Axios (inter-service communication).
+- **Deployment:** Docker & Docker Compose.
 
-1. Mở terminal và di chuyển vào thư mục `backend`:
-   ```bash
-   cd dormitory-microservice/backend
-   ```
+### **Frontend**
 
-2. Khởi chạy tất cả các dịch vụ:
-   ```bash
-   docker-compose up --build -d
-   ```
-   *Lưu ý: Lần đầu tiên chạy có thể mất vài phút để tải image và cài đặt dependencies.*
-
-3. Kiểm tra trạng thái các container:
-   ```bash
-   docker-compose ps
-   ```
-   Đảm bảo tất cả các dịch vụ đều ở trạng thái `running` hoặc `healthy`.
-
-### 2. Khởi chạy Frontend
-
-Sau khi backend đã chạy ổn định, bạn có thể khởi chạy giao diện người dùng.
-
-1. Mở một terminal mới và di chuyển vào thư mục `frontend`:
-   ```bash
-   cd dormitory-microservice/frontend
-   ```
-
-2. Cài đặt các thư viện cần thiết:
-   ```bash
-   npm install
-   ```
-
-3. Khởi chạy server phát triển:
-   ```bash
-   npm run dev
-   ```
-
-4. Truy cập vào địa chỉ: `http://localhost:5173` để sử dụng ứng dụng.
+- **Framework:** React.js (với Vite)
+- **Ngôn ngữ:** TypeScript (TypeScript-first)
+- **Styling:** TailwindCSS & Custom Vanilla CSS (Dark mode optimized, Glassmorphism).
+- **Quản lý trạng thái:** React Hooks (useState, useEffect, useContext).
 
 ---
 
-## 🛠 Cấu Hình Cơ Sở Dữ Liệu
+## 🏗 Kiến Trúc Hệ Thống (7+1 Services)
 
-- Hệ thống sử dụng **MySQL 8.0**.
-- Cổng kết nối bên ngoài: `3307` (Dùng để kết nối từ các công cụ như MySQL Workbench hoặc DBeaver).
-- Dữ liệu được lưu trữ trong Docker Volume `mysql_data` để đảm bảo không bị mất khi restart container.
-- Mỗi dịch vụ có database riêng (ví dụ: `auth_db`, `student_db`, ...) để tuân thủ kiến trúc Microservices.
+Tất cả các dịch vụ được đóng gói bằng Docker và kết nối qua Docker Network.
 
-## 📝 Các Endpoint Quan Trọng
-
-- **API Gateway:** `http://localhost:8080`
-- **Tài liệu API:** (Nếu có Swagger, hãy truy cập `http://localhost:8080/docs` - *Cần cấu hình thêm*)
-
-## ⚠️ Giải Quyết Sự Cố
-
-- **Lỗi cổng 3307 đã bị chiếm dụng:** Kiểm tra xem bạn có đang chạy MySQL trên máy thật không. Nếu có, hãy tắt nó hoặc đổi cổng trong `docker-compose.yml`.
-- **Lỗi kết nối Database:** Các dịch vụ sẽ chờ MySQL khởi động hoàn toàn trước khi chạy `prisma db push`. Nếu gặp lỗi, hãy thử chạy `docker-compose restart <tên-dịch-vụ>`.
-- **Lỗi xác thực JWT:** Đảm bảo `JWT_SECRET` đồng nhất giữa `api-gateway` và `auth-service` trong tệp `docker-compose.yml`.
+1.  **API Gateway (Port 8080):**
+    - Cổng duy nhất tiếp nhận Request.
+    - Xử lý Proxying sang các dịch vụ nội bộ.
+    - Kiểm thực JWT tại lớp Gateway để bảo vệ mọi endpoint `secure: true`.
+2.  **Auth Service (Port 3001):**
+    - Quản lý User (Student, Staff, Admin).
+    - Đăng nhập, Đăng ký và Quản lý phiên làm việc.
+3.  **Student Service (Port 3002):**
+    - Quản lý hồ sơ chi tiết (Họ tên, SĐT, MSSV...).
+4.  **Room Service (Port 3003):**
+    - Quản lý Phòng (Room), Loại phòng (Normal/Premium), Sức chứa.
+    - Quản lý bản ghi cư trú (**Stays** - Trạng thái: ACTIVE, ENDED, LEFT_EARLY).
+5.  **Registration Service (Port 3004):**
+    - Xử lý đơn đăng ký phòng.
+    - Quản lý trạng thái đơn (PENDING, APPROVED, REJECTED).
+6.  **Payment Service (Port 3005):**
+    - Quản lý Hóa đơn (Invoices) và Thanh toán (Payments).
+7.  **Complaint Service (Port 3006):**
+    - Tiếp nhận báo hỏng và khiếu nại (PENDING, IN_PROGRESS, RESOLVED).
+8.  **Utility Service (Port 3007):**
+    - Theo dõi chỉ số điện/nước hàng tháng.
 
 ---
-⚡ *Chúc bạn có trải nghiệm tuyệt vời với hệ thống!*
+
+## ⚡ Các Quy Tắc Nghiệp Vụ Đặc Thù (Business Logic)
+
+### **1. Tự Động Hóa Học Kỳ (Registration Automation)**
+
+Hệ thống tự động xác định bối cảnh đăng ký dựa trên ngày hiện tại của máy chủ:
+
+- **Học kỳ 1:** 15/08 - 14/01 (Năm học bắt đầu).
+- **Học kỳ 2:** 15/01 - 14/06.
+- **Học kỳ Hè:** 15/06 - 14/08.
+- _Ví dụ:_ Ngày 23/06/2026 sẽ được hệ thống định danh là **Học kỳ Hè** của năm học **2025-2026**.
+
+### **2. Quản Lý Sức Chứa (Occupancy Management)**
+
+- Số lượng chỗ trống của phòng được tính toán dựa trên các bản ghi cư trú có trạng thái `ACTIVE` trong `Room Service`.
+- Khi ban quản lý `APPROVE` đơn đăng ký, một bản ghi `Stay` sẽ tự động được tạo, làm giảm số lượng giường trống ngay lập tức.
+
+### **3. Giao Diện Người Dùng (UI/UX)**
+
+- **Room Status Bar:** Thanh trạng thái sử dụng gradient tùy theo loại phòng. Phần lấp đầy hiển thị bằng màu trắng (white filler).
+- **Residency Dashboard:** Phân tách rõ ràng giữa cư trú đang hoạt động và lịch sử đã kết thúc.
+- **Registration History:** Hiển thị lý do từ chối cụ thể cho sinh viên nếu đơn không được chấp nhận.
+
+---
+
+## 🛠 Hướng Dẫn Vận Hành
+
+### **Backend (Docker)**
+
+```bash
+cd backend
+docker-compose up --build -d
+```
+
+_Lưu ý: Đảm bảo cổng 8080 và 3001-3007 không bị chiếm dụng._
+
+### **Frontend**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Giao diện sẽ chạy tại `http://localhost:5173`.
+
+---
+
+## 📂 Cơ Cấu Dữ Liệu
+
+Mỗi dịch vụ Microservice sở hữu cơ sở dữ liệu MongoDB riêng biệt để đảm bảo tính độc lập hoàn toàn (Loose Coupling), tuân thủ nghiêm ngặt nguyên tắc thiết kế Microservices.
+
+---
+
+⚡ _Hệ thống được phát triển với tinh thần tối ưu hóa quy trình quản lý ký túc xá bằng công nghệ hiện đại._

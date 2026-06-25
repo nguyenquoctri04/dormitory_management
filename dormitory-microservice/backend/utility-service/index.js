@@ -3,6 +3,7 @@ const cors = require('cors');
 require('dotenv').config();
 const utilityRoutes = require('./routes/utilityRoutes');
 const prisma = require('./lib/prismaClient');
+const { consumeUtilityEvents } = require('./lib/rabbitmq');
 
 const app = express();
 const PORT = process.env.PORT || 3007;
@@ -20,6 +21,8 @@ async function startServer() {
   try {
     await prisma.$connect();
     console.log('✅ Connected to MongoDB Utility DB with Prisma');
+    
+    consumeUtilityEvents();
 
     app.listen(PORT, () => {
       console.log(`🚀 Utility Service is running on port ${PORT}`);

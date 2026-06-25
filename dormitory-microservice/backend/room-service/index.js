@@ -5,6 +5,7 @@ const roomRoutes = require('./routes/roomRoutes');
 const periodRoutes = require('./routes/periodRoutes');
 const stayRoutes = require('./routes/stayRoutes');
 const { PrismaClient } = require('@prisma/client');
+const { consumeRegistrationEvents, consumeUserEvents } = require('./lib/rabbitmq');
 
 const app = express();
 const prisma = new PrismaClient();
@@ -25,6 +26,10 @@ async function startServer() {
   try {
     await prisma.$connect();
     console.log('✅ Connected to MongoDB with Prisma');
+    
+    // Start RabbitMQ Consumers
+    consumeRegistrationEvents();
+    consumeUserEvents();
 
     app.listen(PORT, () => {
       console.log(`🚀 Room Service is running on port ${PORT}`);

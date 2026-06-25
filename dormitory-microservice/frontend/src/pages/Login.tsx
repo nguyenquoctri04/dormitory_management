@@ -18,7 +18,8 @@ export default function LoginPage() {
     try {
       const user = await auth.login(email, password)
       const role = user?.role ? String(user.role).toUpperCase() : ''
-      if (role.includes('ADMIN')) navigate('/admin')
+      if (role === 'ADMIN') navigate('/admin')
+      else if (role === 'STAFF') navigate('/staff')
       else navigate('/student')
     } catch (err: any) {
       setError(err.message || 'Đăng nhập thất bại')
